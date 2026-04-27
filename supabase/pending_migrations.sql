@@ -144,7 +144,7 @@ $$;
 
 -- ── RPC: tel_advance_reveal ───────────────────────────────────────────────
 -- Presenter taps to reveal next item, or to advance to next chain.
--- When p_new_reveal_chain >= total_steps, transitions to 'finished'.
+-- When p_new_reveal_chain >= length of reveal_order, transitions to 'finished'.
 
 CREATE OR REPLACE FUNCTION tel_advance_reveal(
   p_code text,
@@ -190,9 +190,9 @@ $$;
 
 -- ============================================================
 -- Shared: random_ideas table and RPC
--- NOTE: Only run this section if the random_ideas table and
--- get_random_ideas function do NOT already exist in your Supabase
--- project (they were added for Game of What and First to Worst).
+-- The random_ideas table is shared across all games.
+-- Only creates the table if it doesn't exist.
+-- Drops and recreates the function to handle signature changes.
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS random_ideas (
@@ -200,7 +200,9 @@ CREATE TABLE IF NOT EXISTS random_ideas (
   idea text NOT NULL UNIQUE
 );
 
-CREATE OR REPLACE FUNCTION get_random_ideas(p_count int, p_exclude text[] DEFAULT '{}')
+DROP FUNCTION IF EXISTS get_random_ideas(integer, text[]);
+
+CREATE FUNCTION get_random_ideas(p_count int, p_exclude text[] DEFAULT '{}')
 RETURNS text[] LANGUAGE sql AS $$
   SELECT ARRAY(
     SELECT idea FROM random_ideas
