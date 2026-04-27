@@ -309,33 +309,6 @@ export default function Play({ params }) {
     return () => { clearInterval(poll); supabase.removeChannel(channel) }
   }, [code])
 
-  // Auto-advance through bot chains in dummy games
-  useEffect(() => {
-    if (!game || game.phase !== "reveal" || !game.is_dummy) return
-    if (!currentPresenterPlayer?.is_bot) return
-    if (advancing) return
-
-    const allRevealed = currentRevealStep >= n - 1
-    const timer = setTimeout(async () => {
-      if (!allRevealed) {
-        await supabase.rpc("tel_advance_reveal", {
-          p_code: code,
-          p_new_reveal_step: currentRevealStep + 1,
-          p_new_reveal_chain: currentRevealChain,
-        })
-      } else {
-        await supabase.rpc("tel_advance_reveal", {
-          p_code: code,
-          p_new_reveal_step: -1,
-          p_new_reveal_chain: currentRevealChain + 1,
-        })
-      }
-      await loadState()
-    }, 400)
-
-    return () => clearTimeout(timer)
-  }, [game?.phase, game?.is_dummy, currentPresenterPlayer?.id, currentRevealStep, currentRevealChain, advancing])
-
   // ── Derived state ─────────────────────────────────────────────────────
 
   const n = game?.total_steps ?? 0
@@ -383,6 +356,33 @@ export default function Play({ params }) {
       .filter(s => s.chain_owner_id === currentPresenterPlayer.id)
       .sort((a, b) => a.step_number - b.step_number)
   }, [currentPresenterPlayer, steps])
+
+  // Auto-advance through bot chains in dummy games
+  useEffect(() => {
+    if (!game || game.phase !== "reveal" || !game.is_dummy) return
+    if (!currentPresenterPlayer?.is_bot) return
+    if (advancing) return
+
+    const allRevealed = currentRevealStep >= n - 1
+    const timer = setTimeout(async () => {
+      if (!allRevealed) {
+        await supabase.rpc("tel_advance_reveal", {
+          p_code: code,
+          p_new_reveal_step: currentRevealStep + 1,
+          p_new_reveal_chain: currentRevealChain,
+        })
+      } else {
+        await supabase.rpc("tel_advance_reveal", {
+          p_code: code,
+          p_new_reveal_step: -1,
+          p_new_reveal_chain: currentRevealChain + 1,
+        })
+      }
+      await loadState()
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [game?.phase, game?.is_dummy, currentPresenterPlayer?.id, currentRevealStep, currentRevealChain, advancing])
 
   // ── Submit helpers ─────────────────────────────────────────────────────
 
