@@ -1,0 +1,1 @@
+self.__REACT_LOADABLE_MANIFEST='{"app/[code]/play/page.js -> fabric":{"id":7382,"files":["static/chunks/f3aef375.30f60dc332818b6e.js","static/chunks/478.a348ddd1b858cc58.js"]}}';
