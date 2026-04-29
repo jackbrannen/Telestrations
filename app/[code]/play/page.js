@@ -513,6 +513,18 @@ export default function Play({ params }) {
     setSubmitting(false)
   }
 
+  async function uploadDrawing(dataUrl) {
+    const res = await fetch(dataUrl)
+    const blob = await res.blob()
+    const filename = `${code}/${Date.now()}-${crypto.randomUUID()}.jpg`
+    const { data, error } = await supabase.storage
+      .from("drawings")
+      .upload(filename, blob, { contentType: "image/jpeg" })
+    if (error) throw error
+    const { data: urlData } = supabase.storage.from("drawings").getPublicUrl(data.path)
+    return urlData.publicUrl
+  }
+
   async function handleSubmitDrawing() {
     if (!myChainOwner || submitting || myStepSubmitted) return
     const getDataUrl = getDrawingRef.current
@@ -521,7 +533,8 @@ export default function Play({ params }) {
     if (!dataUrl) { alert("Canvas not ready"); return }
     setSubmitting(true)
     try {
-      await submitStep(myChainOwner.id, currentStep, "drawing", dataUrl)
+      const url = await uploadDrawing(dataUrl)
+      await submitStep(myChainOwner.id, currentStep, "drawing", url)
     } catch (e) {
       alert("Error submitting: " + e.message)
     }
