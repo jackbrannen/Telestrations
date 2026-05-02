@@ -1,5 +1,5 @@
 node_modules/
 .next/
 .env.local
-.vercel/output
-node_modules/
+.vercel/
+.DS_Store
