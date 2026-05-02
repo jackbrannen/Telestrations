@@ -118,8 +118,15 @@ export default function Lobby({ params }) {
   }, [code])
 
   useEffect(() => {
-    if (game?.phase === "play") router.replace(`/${code}/play`)
-  }, [game?.phase])
+    if (game?.phase === "play" && myPlayerId) router.replace(`/${code}/play`)
+  }, [game?.phase, myPlayerId])
+
+  // Auto-reset finished game when a joined player navigates back to lobby
+  useEffect(() => {
+    if (game?.phase === "finished" && myPlayerId) {
+      supabase.rpc("tel_reset_game", { p_code: code })
+    }
+  }, [game?.phase, myPlayerId])
 
   async function join() {
     const trimmedUsername = username.trim()
@@ -176,6 +183,17 @@ export default function Lobby({ params }) {
     return (
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 18, fontWeight: 700 }}>Loading…</p>
+      </div>
+    )
+  }
+
+  if (game.phase !== "lobby" && !myPlayerId) {
+    return (
+      <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", textAlign: "center" }}>
+        <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.5, marginBottom: 16 }}>Telestrations</div>
+        <h2 style={{ fontSize: 28, fontWeight: 900, marginBottom: 12, letterSpacing: "-0.5px", color: "white" }}>A game is in progress.</h2>
+        <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 32, color: "white" }}>This page will update automatically.</p>
+        <button disabled style={{ background: YELLOW, color: "#000", fontSize: 18, fontWeight: 900, padding: "18px 28px" }}>Join Lobby</button>
       </div>
     )
   }

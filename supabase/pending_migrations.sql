@@ -188,6 +188,12 @@ BEGIN
 END;
 $$;
 
+-- ── Enable Realtime for Telestrations tables ──────────────────────────────
+-- Required so postgres_changes subscriptions fire for all clients.
+ALTER PUBLICATION supabase_realtime ADD TABLE tel_games;
+ALTER PUBLICATION supabase_realtime ADD TABLE tel_players;
+ALTER PUBLICATION supabase_realtime ADD TABLE tel_steps;
+
 -- ============================================================
 -- Shared: random_ideas table and RPC
 -- The random_ideas table is shared across all games.

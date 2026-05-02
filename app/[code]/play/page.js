@@ -228,54 +228,99 @@ function DrawingCanvas({ onExport }) {
     if (onExportRef.current) onExportRef.current(() => getDataUrl())
   }, [])
 
-  const maxSize = toolMode === "eraser" ? 100 : 80
+  const BRUSH_SIZES = [2, 4, 8, 14, 22, 34, 52]
 
   return (
     <div>
-      {/* Tool buttons */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 0 8px", flexWrap: "wrap" }}>
+      {/* Tool buttons with SVG icons */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 0 8px" }}>
+        {/* Brush */}
+        <button
+          onClick={() => handleSetTool("pen")}
+          style={{ background: toolMode === "pen" ? YELLOW : "rgba(255,255,255,0.15)", color: toolMode === "pen" ? "#000" : "white", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+          </svg>
+        </button>
+        {/* Eraser */}
         <button
           onClick={() => handleSetTool(toolMode === "eraser" ? "pen" : "eraser")}
-          style={{
-            background: toolMode === "eraser" ? YELLOW : "rgba(255,255,255,0.15)",
-            color: toolMode === "eraser" ? "#000" : "white",
-            fontSize: 13, fontWeight: 800, padding: "8px 12px", borderRadius: 6, flexShrink: 0,
-          }}
-        >Eraser</button>
+          style={{ background: toolMode === "eraser" ? YELLOW : "rgba(255,255,255,0.15)", color: toolMode === "eraser" ? "#000" : "white", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 20H7L3 16l13-13 7 7-3 3"/>
+            <path d="M6.5 17.5l4-4"/>
+          </svg>
+        </button>
+        {/* Fill */}
         <button
           onClick={() => handleSetTool(toolMode === "bucket" ? "pen" : "bucket")}
-          style={{
-            background: toolMode === "bucket" ? YELLOW : "rgba(255,255,255,0.15)",
-            color: toolMode === "bucket" ? "#000" : "white",
-            fontSize: 13, fontWeight: 800, padding: "8px 12px", borderRadius: 6, flexShrink: 0,
-          }}
-        >Fill</button>
+          style={{ background: toolMode === "bucket" ? YELLOW : "rgba(255,255,255,0.15)", color: toolMode === "bucket" ? "#000" : "white", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 11L8.93 1 2 8l11 11 6-8z"/>
+            <circle cx="20.5" cy="20.5" r="2.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </button>
+        {/* Undo */}
         <button
           onClick={handleUndo}
-          style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 13, fontWeight: 800, padding: "8px 12px", borderRadius: 6, flexShrink: 0 }}
-        >Undo</button>
+          style={{ background: "rgba(255,255,255,0.15)", color: "white", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7v6h6"/>
+            <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          </svg>
+        </button>
+        {/* Redo */}
         <button
           onClick={handleRedo}
-          style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 13, fontWeight: 800, padding: "8px 12px", borderRadius: 6, flexShrink: 0 }}
-        >Redo</button>
+          style={{ background: "rgba(255,255,255,0.15)", color: "white", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 7v6h-6"/>
+            <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/>
+          </svg>
+        </button>
+        {/* Clear */}
         <button
           onClick={handleClear}
-          style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 800, padding: "8px 12px", borderRadius: 6, flexShrink: 0 }}
-        >Clear</button>
+          style={{ background: "rgba(255,255,255,0.10)", color: "rgba(255,255,255,0.6)", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+        </button>
       </div>
 
-      {/* Brush size slider */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", flexShrink: 0 }}>Size</span>
-        <input
-          type="range"
-          min={1}
-          max={maxSize}
-          value={Math.min(brushSize, maxSize)}
-          onChange={e => handleSizeChange(Number(e.target.value))}
-          style={{ flex: 1, accentColor: YELLOW, height: 4 }}
-        />
-        <span style={{ fontSize: 13, fontWeight: 700, color: "rgba(255,255,255,0.5)", minWidth: 28, textAlign: "right" }}>{Math.min(brushSize, maxSize)}</span>
+      {/* Brush size circles */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, paddingBottom: 10 }}>
+        {BRUSH_SIZES.map((sz, i) => {
+          const circleD = 5 + i * 4.5
+          const isActive = brushSize === sz
+          return (
+            <button
+              key={sz}
+              onClick={() => handleSizeChange(sz)}
+              style={{
+                width: 38, height: 38, borderRadius: 6, flexShrink: 0,
+                background: isActive ? "rgba(255,255,255,0.18)" : "transparent",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                border: isActive ? `2px solid ${YELLOW}` : "2px solid transparent",
+              }}
+            >
+              <div style={{
+                width: circleD, height: circleD, borderRadius: "50%",
+                background: toolMode === "eraser" ? "rgba(255,255,255,0.35)" : "white",
+              }} />
+            </button>
+          )
+        })}
       </div>
 
       {/* Color palette */}
@@ -562,7 +607,6 @@ export default function Play({ params }) {
       p_new_reveal_step: currentRevealStep + 1,
       p_new_reveal_chain: currentRevealChain,
     })
-    await loadState()
     setAdvancing(false)
   }
 
@@ -574,13 +618,7 @@ export default function Play({ params }) {
       p_new_reveal_step: -1,
       p_new_reveal_chain: currentRevealChain + 1,
     })
-    await loadState()
     setAdvancing(false)
-  }
-
-  async function handlePlayAgain() {
-    await supabase.rpc("tel_reset_game", { p_code: code })
-    router.replace(`/${code}`)
   }
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -604,19 +642,12 @@ export default function Play({ params }) {
       <div style={{ minHeight: "100dvh", background: BG, color: "white" }}>
         {/* Header */}
         <div style={{ padding: "36px 24px 24px", textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🎨</div>
           <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-1px", marginBottom: 8 }}>That's a wrap!</h1>
           <p style={{ fontSize: 16, opacity: 0.65, fontWeight: 500, marginBottom: 28 }}>This is your reminder to take screenshots.</p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-            <button
-              onClick={handlePlayAgain}
-              style={{ background: YELLOW, color: "#000", fontSize: 18, fontWeight: 900, padding: "16px 28px", borderRadius: 8 }}
-            >Play again</button>
-            <button
-              onClick={() => router.replace(`/${code}`)}
-              style={{ background: "rgba(255,255,255,0.12)", color: "white", fontSize: 16, fontWeight: 700, padding: "16px 20px", borderRadius: 8 }}
-            >Back to lobby</button>
-          </div>
+          <button
+            onClick={() => router.replace(`/${code}`)}
+            style={{ background: "rgba(255,255,255,0.12)", color: "white", fontSize: 16, fontWeight: 700, padding: "16px 28px", borderRadius: 8 }}
+          >Back to lobby</button>
         </div>
 
         {/* Telestration thumbnails */}
@@ -664,24 +695,30 @@ export default function Play({ params }) {
 
         {/* Chain detail modal */}
         {modalChain && (
-          <div
-            onClick={() => setSelectedChainOwner(null)}
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 100, overflowY: "auto", padding: "24px" }}
-          >
-            <div onClick={e => e.stopPropagation()} style={{ maxWidth: 480, margin: "0 auto" }}>
-              <div style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 20 }}>
-                {modalChain.owner.name}'s telestration
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 100, display: "flex", flexDirection: "column" }}>
+            <div style={{ flex: 1, overflowY: "auto", padding: "24px 24px 0" }}>
+              <div style={{ maxWidth: 480, margin: "0 auto", position: "relative" }}>
+                <button
+                  onClick={() => setSelectedChainOwner(null)}
+                  style={{ position: "absolute", top: 0, right: 0, background: "rgba(255,255,255,0.15)", color: "white", width: 36, height: 36, borderRadius: "50%", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
+                >×</button>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 20, paddingRight: 48 }}>
+                  {modalChain.owner.name}'s telestration
+                </div>
+                {modalChain.steps.map(s => {
+                  const author = players.find(p => p.id === s.author_id)
+                  return <RevealCard key={s.id} step={s} authorName={author?.name ?? "?"} />
+                })}
+                <div style={{ height: 24 }} />
               </div>
-              {modalChain.steps.map(s => {
-                const author = players.find(p => p.id === s.author_id)
-                return <RevealCard key={s.id} step={s} authorName={author?.name ?? "?"} />
-              })}
-              <button
-                onClick={() => setSelectedChainOwner(null)}
-                style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 16, fontWeight: 700, padding: "16px", width: "100%", marginTop: 16, borderRadius: 8 }}
-              >
-                Close
-              </button>
+            </div>
+            <div style={{ padding: "16px 24px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "rgba(0,0,0,0.95)", borderTop: "1px solid rgba(255,255,255,0.12)" }}>
+              <div style={{ maxWidth: 480, margin: "0 auto" }}>
+                <button
+                  onClick={() => setSelectedChainOwner(null)}
+                  style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 16, fontWeight: 700, padding: "16px", width: "100%", borderRadius: 8 }}
+                >Close</button>
+              </div>
             </div>
           </div>
         )}
@@ -760,7 +797,7 @@ export default function Play({ params }) {
 
     // Presenter view (active reveal) — Reveal button overlaid on the next card
     return (
-      <div style={{ minHeight: "100dvh", background: BG, color: "white" }}>
+      <div style={{ minHeight: "100dvh", background: BG, color: "white", paddingBottom: allStepsRevealed ? 100 : 0 }}>
         <div style={{ padding: "28px 24px 20px", background: "rgba(0,0,0,0.3)" }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.45, marginBottom: 4 }}>
             YOUR TELESTRATION
@@ -796,19 +833,19 @@ export default function Play({ params }) {
               </div>
             )
           })}
-
-          {allStepsRevealed && (
-            <div style={{ marginTop: 24 }}>
-              <button
-                onClick={handleNextChain}
-                disabled={advancing}
-                style={{ background: "rgba(255,255,255,0.2)", color: "white", fontSize: 18, fontWeight: 900, padding: "20px", width: "100%", display: "block", borderRadius: 8 }}
-              >
-                {isLastChain ? "Finish →" : "Next telestration →"}
-              </button>
-            </div>
-          )}
         </div>
+
+        {allStepsRevealed && (
+          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "16px 24px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+            <button
+              onClick={handleNextChain}
+              disabled={advancing}
+              style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "20px", width: "100%", display: "block", borderRadius: 8 }}
+            >
+              {isLastChain ? "Finish →" : "Next telestration →"}
+            </button>
+          </div>
+        )}
       </div>
     )
   }
