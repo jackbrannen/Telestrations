@@ -400,7 +400,6 @@ export default function Play({ params }) {
   const [sentence, setSentence] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [shownIdeas, setShownIdeas] = useState([])
-  const [ideasPhase, setIdeasPhase] = useState("none") // "none" | "first" | "done"
   const [loadingIdeas, setLoadingIdeas] = useState(false)
 
   // Drawing phase
@@ -595,15 +594,13 @@ export default function Play({ params }) {
   }
 
   async function handleGetIdeas() {
-    if (loadingIdeas || ideasPhase === "done") return
+    if (loadingIdeas || shownIdeas.length >= 9) return
     setLoadingIdeas(true)
-    const count = ideasPhase === "none" ? 3 : 2
     const { data } = await supabase.rpc("get_random_ideas", {
-      p_count: count,
+      p_count: 3,
       p_exclude: shownIdeas,
     })
     if (data) setShownIdeas(prev => [...prev, ...data])
-    setIdeasPhase(ideasPhase === "none" ? "first" : "done")
     setLoadingIdeas(false)
   }
 
@@ -989,7 +986,7 @@ export default function Play({ params }) {
         {/* Random Ideas — first writing step only */}
         {isFirstStep && (
           <div style={{ marginTop: 20 }}>
-            {ideasPhase !== "done" ? (
+            {shownIdeas.length < 9 ? (
               <button
                 onClick={handleGetIdeas}
                 disabled={loadingIdeas}
@@ -999,10 +996,10 @@ export default function Play({ params }) {
                   width: "100%", marginBottom: shownIdeas.length ? 12 : 0, borderRadius: 6,
                 }}
               >
-                {ideasPhase === "none" ? "✦ Random ideas" : "✦ 2 more ideas"}
+                {shownIdeas.length === 0 ? "✦ Random ideas" : "✦ 3 more ideas"}
               </button>
             ) : (
-              <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.25)", padding: "12px 18px", background: "rgba(255,255,255,0.05)", borderRadius: 6 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.25)", padding: "12px 18px", background: "rgba(255,255,255,0.05)", borderRadius: 6, marginBottom: 12 }}>
                 No more ideas
               </div>
             )}
@@ -1010,18 +1007,17 @@ export default function Play({ params }) {
             {shownIdeas.length > 0 && (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, paddingBottom: 24 }}>
                 {shownIdeas.map((idea, i) => (
-                  <button
+                  <div
                     key={i}
-                    onClick={() => setSentence(prev => prev ? prev + " " + idea : idea)}
                     style={{
                       padding: "7px 14px", borderRadius: 999,
                       fontSize: 14, fontWeight: 700,
-                      background: "rgba(255,255,255,0.1)", color: "white",
-                      border: "1px solid rgba(255,255,255,0.15)",
+                      background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.65)",
+                      border: "1px solid rgba(255,255,255,0.12)",
                     }}
                   >
                     {idea}
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
