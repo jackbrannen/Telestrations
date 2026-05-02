@@ -448,7 +448,7 @@ export default function Play({ params }) {
 
   useEffect(() => {
     loadState()
-    const poll = setInterval(loadState, 1500)
+    const poll = setInterval(loadState, 5000)
 
     const channel = supabase.channel(`tel-play-${code}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "tel_games", filter: `code=eq.${code}` }, loadState)

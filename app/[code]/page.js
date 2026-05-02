@@ -107,7 +107,7 @@ export default function Lobby({ params }) {
 
   useEffect(() => {
     loadState()
-    const poll = setInterval(loadState, 1500)
+    const poll = setInterval(loadState, 5000)
 
     const channel = supabase.channel(`tel-lobby-${code}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "tel_players", filter: `game_code=eq.${code}` }, loadState)
