@@ -412,6 +412,9 @@ export default function Play({ params }) {
   // Finished screen
   const [selectedChainOwner, setSelectedChainOwner] = useState(null)
 
+  // Track previous phase so we don't auto-redirect when game resets after finishing
+  const prevPhaseRef = useRef(null)
+
   const me = players.find(p => p.id === myPlayerId)
 
   async function loadState() {
@@ -419,7 +422,12 @@ export default function Play({ params }) {
       .from("tel_games").select("*").eq("code", code).single()
 
     if (!gameData) { router.replace(`/${code}`); return }
-    if (gameData.phase === "lobby") { router.replace(`/${code}`); return }
+    if (gameData.phase === "lobby") {
+      // Don't auto-redirect players who are viewing the finished screen
+      if (prevPhaseRef.current !== "finished") router.replace(`/${code}`)
+      return
+    }
+    prevPhaseRef.current = gameData.phase
 
     const { data: playerData } = await supabase
       .from("tel_players").select("id,name,first_name,seat,is_bot")
@@ -607,6 +615,7 @@ export default function Play({ params }) {
       p_new_reveal_step: currentRevealStep + 1,
       p_new_reveal_chain: currentRevealChain,
     })
+    await loadState()
     setAdvancing(false)
   }
 
@@ -618,6 +627,7 @@ export default function Play({ params }) {
       p_new_reveal_step: -1,
       p_new_reveal_chain: currentRevealChain + 1,
     })
+    await loadState()
     setAdvancing(false)
   }
 
@@ -696,15 +706,18 @@ export default function Play({ params }) {
         {/* Chain detail modal */}
         {modalChain && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.88)", zIndex: 100, display: "flex", flexDirection: "column" }}>
-            <div style={{ flex: 1, overflowY: "auto", padding: "24px 24px 0" }}>
-              <div style={{ maxWidth: 480, margin: "0 auto", position: "relative" }}>
-                <button
-                  onClick={() => setSelectedChainOwner(null)}
-                  style={{ position: "absolute", top: 0, right: 0, background: "rgba(255,255,255,0.15)", color: "white", width: 36, height: 36, borderRadius: "50%", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}
-                >×</button>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 20, paddingRight: 48 }}>
-                  {modalChain.owner.name}'s telestration
-                </div>
+            {/* Sticky header */}
+            <div style={{ padding: "16px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+              <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>
+                {modalChain.owner.name}'s telestration
+              </div>
+              <button
+                onClick={() => setSelectedChainOwner(null)}
+                style={{ background: "rgba(255,255,255,0.15)", color: "white", width: 36, height: 36, borderRadius: "50%", fontSize: 20, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+              >×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "20px 24px 0" }}>
+              <div style={{ maxWidth: 480, margin: "0 auto" }}>
                 {modalChain.steps.map(s => {
                   const author = players.find(p => p.id === s.author_id)
                   return <RevealCard key={s.id} step={s} authorName={author?.name ?? "?"} />
