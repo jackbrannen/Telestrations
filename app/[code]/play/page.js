@@ -395,6 +395,17 @@ async function fetchIdeas() {
   _ideasCache = await res.json()
   return _ideasCache
 }
+function sampleIdeas(categories, excludeSet, count = 3) {
+  const cats = Object.keys(categories).map(cat => ({
+    cat,
+    pool: categories[cat].filter(idea => !excludeSet.has(idea.toLowerCase()))
+  })).filter(({ pool }) => pool.length > 0)
+  for (let i = cats.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cats[i], cats[j]] = [cats[j], cats[i]]
+  }
+  return cats.slice(0, count).map(({ pool }) => pool[Math.floor(Math.random() * pool.length)])
+}
 
 export default function Play({ params }) {
   const router = useRouter()
@@ -606,15 +617,9 @@ export default function Play({ params }) {
     if (loadingIdeas || shownIdeas.length >= 9) return
     setLoadingIdeas(true)
     const isFirst = shownIdeas.length === 0
-    const allIdeas = await fetchIdeas()
+    const categories = await fetchIdeas()
     const excludeSet = new Set(shownIdeas.map(s => s.toLowerCase()))
-    const pool = allIdeas.filter(idea => !excludeSet.has(idea.toLowerCase()))
-    const picked = []
-    const poolCopy = [...pool]
-    while (picked.length < 3 && poolCopy.length > 0) {
-      const idx = Math.floor(Math.random() * poolCopy.length)
-      picked.push(poolCopy.splice(idx, 1)[0])
-    }
+    const picked = sampleIdeas(categories, excludeSet)
     if (isFirst) {
       const others = players.filter(p => p.id !== myPlayerId && (p.first_name || p.name))
       if (others.length && picked.length) {
