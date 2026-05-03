@@ -387,6 +387,15 @@ function RevealCard({ step, authorName }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+const IDEAS_URL = "https://raw.githubusercontent.com/jackbrannen/JackGames/main/random_ideas.json"
+let _ideasCache = null
+async function fetchIdeas() {
+  if (_ideasCache) return _ideasCache
+  const res = await fetch(IDEAS_URL)
+  _ideasCache = await res.json()
+  return _ideasCache
+}
+
 export default function Play({ params }) {
   const router = useRouter()
   const code = useMemo(() => params.code.toUpperCase(), [params.code])
@@ -597,21 +606,23 @@ export default function Play({ params }) {
     if (loadingIdeas || shownIdeas.length >= 9) return
     setLoadingIdeas(true)
     const isFirst = shownIdeas.length === 0
-    const { data } = await supabase.rpc("get_random_ideas", {
-      p_count: 3,
-      p_exclude: shownIdeas,
-    })
-    if (data) {
-      const newIdeas = [...data]
-      if (isFirst) {
-        const others = players.filter(p => p.id !== myPlayerId && (p.first_name || p.name))
-        if (others.length && newIdeas.length) {
-          const pick = others[Math.floor(Math.random() * others.length)]
-          newIdeas[Math.floor(Math.random() * newIdeas.length)] = pick.first_name || pick.name
-        }
-      }
-      setShownIdeas(prev => [...prev, ...newIdeas])
+    const allIdeas = await fetchIdeas()
+    const excludeSet = new Set(shownIdeas.map(s => s.toLowerCase()))
+    const pool = allIdeas.filter(idea => !excludeSet.has(idea.toLowerCase()))
+    const picked = []
+    const poolCopy = [...pool]
+    while (picked.length < 3 && poolCopy.length > 0) {
+      const idx = Math.floor(Math.random() * poolCopy.length)
+      picked.push(poolCopy.splice(idx, 1)[0])
     }
+    if (isFirst) {
+      const others = players.filter(p => p.id !== myPlayerId && (p.first_name || p.name))
+      if (others.length && picked.length) {
+        const pick = others[Math.floor(Math.random() * others.length)]
+        picked[Math.floor(Math.random() * picked.length)] = pick.first_name || pick.name
+      }
+    }
+    if (picked.length) setShownIdeas(prev => [...prev, ...picked])
     setLoadingIdeas(false)
   }
 
