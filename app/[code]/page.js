@@ -96,15 +96,6 @@ export default function Lobby({ params }) {
     if (existing) setMyPlayerId(existing)
   }, [code])
 
-  // If the stored playerId no longer exists in the player list (e.g. deleted by tel_reset_game),
-  // clear it so the in-progress screen shows instead of redirecting to the play page.
-  useEffect(() => {
-    if (myPlayerId && players.length > 0 && !players.find(p => p.id === myPlayerId)) {
-      localStorage.removeItem(`tel:${code}:playerId`)
-      setMyPlayerId(null)
-    }
-  }, [players, myPlayerId, code])
-
   useEffect(() => {
     const saved = loadProfile()
     if (saved) {
@@ -127,15 +118,15 @@ export default function Lobby({ params }) {
   }, [code])
 
   useEffect(() => {
-    if (game?.phase === "play" && myPlayerId) router.replace(`/${code}/play`)
-  }, [game?.phase, myPlayerId])
+    if (game?.phase === "play" && me) router.replace(`/${code}/play`)
+  }, [game?.phase, me])
 
   // Auto-reset finished game when a joined player navigates back to lobby
   useEffect(() => {
-    if (game?.phase === "finished" && myPlayerId) {
+    if (game?.phase === "finished" && me) {
       supabase.rpc("tel_reset_game", { p_code: code })
     }
-  }, [game?.phase, myPlayerId])
+  }, [game?.phase, me])
 
   async function join() {
     const trimmedUsername = username.trim()
@@ -196,7 +187,7 @@ export default function Lobby({ params }) {
     )
   }
 
-  if (game.phase !== "lobby" && !myPlayerId) {
+  if (game.phase !== "lobby" && !me) {
     const gameJustFinished = game.phase === "finished"
     return (
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", textAlign: "center" }}>
