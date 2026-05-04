@@ -96,6 +96,15 @@ export default function Lobby({ params }) {
     if (existing) setMyPlayerId(existing)
   }, [code])
 
+  // If the stored playerId no longer exists in the player list (e.g. deleted by tel_reset_game),
+  // clear it so the in-progress screen shows instead of redirecting to the play page.
+  useEffect(() => {
+    if (myPlayerId && players.length > 0 && !players.find(p => p.id === myPlayerId)) {
+      localStorage.removeItem(`tel:${code}:playerId`)
+      setMyPlayerId(null)
+    }
+  }, [players, myPlayerId, code])
+
   useEffect(() => {
     const saved = loadProfile()
     if (saved) {
