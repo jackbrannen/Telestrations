@@ -163,7 +163,7 @@ export default function Lobby({ params }) {
 
     localStorage.setItem(`tel:${code}:playerId`, data.id)
     setMyPlayerId(data.id)
-    setJoining(false)
+    // Don't reset joining — the join form disappears when me is set, preventing a flash back to "Join"
   }
 
   async function startGame() {

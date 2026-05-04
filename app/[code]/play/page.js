@@ -212,10 +212,12 @@ function DrawingCanvas({ onExport }) {
   }
 
   function handleClear() {
-    historyRef.current = []
-    redoStackRef.current = []
     const cv = fabricRef.current
     if (!cv) return
+    if (cv.getObjects().length > 0) {
+      historyRef.current.push(JSON.stringify(cv.toJSON()))
+      redoStackRef.current = []
+    }
     cv.clear(); cv.backgroundColor = "#ffffff"; cv.renderAll()
   }
 
@@ -250,8 +252,9 @@ function DrawingCanvas({ onExport }) {
           style={{ background: toolMode === "eraser" ? YELLOW : "rgba(255,255,255,0.15)", color: toolMode === "eraser" ? "#000" : "white", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20 20H7L3 16l13-13 7 7-3 3"/>
-            <path d="M6.5 17.5l4-4"/>
+            <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/>
+            <path d="M22 21H7"/>
+            <path d="m5 11 9 9"/>
           </svg>
         </button>
         {/* Fill */}
@@ -260,8 +263,9 @@ function DrawingCanvas({ onExport }) {
           style={{ background: toolMode === "bucket" ? YELLOW : "rgba(255,255,255,0.15)", color: toolMode === "bucket" ? "#000" : "white", width: 44, height: 44, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 11L8.93 1 2 8l11 11 6-8z"/>
-            <circle cx="20.5" cy="20.5" r="2.5" fill="currentColor" stroke="none"/>
+            <path d="m19 11-8-8-8.5 8.5a5.5 5.5 0 0 0 7.78 7.78Z"/>
+            <path d="m5 3 5 5"/>
+            <path d="M22 22c0-1.2-.2-2-.8-3-1.4 0-2.2 1.8-2.2 3"/>
           </svg>
         </button>
         {/* Undo */}
@@ -307,17 +311,15 @@ function DrawingCanvas({ onExport }) {
             <button
               key={sz}
               onClick={() => handleSizeChange(sz)}
+              disabled={toolMode === "bucket"}
               style={{
                 width: 38, height: 38, borderRadius: 6, flexShrink: 0,
-                background: isActive ? "rgba(255,255,255,0.18)" : "transparent",
+                background: isActive && toolMode !== "bucket" ? "rgba(255,255,255,0.18)" : "transparent",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                border: isActive ? `2px solid ${YELLOW}` : "2px solid transparent",
+                border: isActive && toolMode !== "bucket" ? `2px solid ${YELLOW}` : "2px solid transparent",
               }}
             >
-              <div style={{
-                width: circleD, height: circleD, borderRadius: "50%",
-                background: toolMode === "eraser" ? "rgba(255,255,255,0.35)" : "white",
-              }} />
+              <div style={{ width: circleD, height: circleD, borderRadius: "50%", background: "white" }} />
             </button>
           )
         })}
