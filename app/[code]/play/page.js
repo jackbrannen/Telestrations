@@ -480,6 +480,13 @@ export default function Play({ params }) {
     return () => { clearInterval(poll); supabase.removeChannel(channel) }
   }, [code])
 
+  // Auto-reset after 30s on finished so late-joiners aren't stuck on the in-progress screen
+  useEffect(() => {
+    if (game?.phase !== "finished") return
+    const t = setTimeout(() => supabase.rpc("tel_reset_game", { p_code: code }), 30000)
+    return () => clearTimeout(t)
+  }, [game?.phase, code])
+
   // ── Derived state (must come before any useEffect that references these) ──
 
   const n = game?.total_steps ?? 0

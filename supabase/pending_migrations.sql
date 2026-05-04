@@ -169,14 +169,14 @@ END;
 $$;
 
 -- ── RPC: tel_reset_game ───────────────────────────────────────────────────
--- Resets game to lobby for play-again. Removes bots and all steps.
+-- Resets game to lobby for play-again. Removes all players and steps so
+-- everyone rejoins fresh (display name auto-fills from saved profile).
 
 CREATE OR REPLACE FUNCTION tel_reset_game(p_code text)
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
   DELETE FROM tel_steps WHERE game_code = p_code;
-  DELETE FROM tel_players WHERE game_code = p_code AND is_bot = true;
-  UPDATE tel_players SET seat = null WHERE game_code = p_code;
+  DELETE FROM tel_players WHERE game_code = p_code;
   UPDATE tel_games
   SET phase = 'lobby',
       total_steps = 0,
