@@ -103,7 +103,7 @@ export default function Lobby({ params }) {
     if (saved) {
       if (saved.username) saveProfile(saved)
       setSavedProfile(saved)
-      setUsername(saved.username || saved.firstName || "")
+      setUsername(saved.username || "")
     }
   }, [])
 
