@@ -65,7 +65,7 @@ function floodFillImageData(imageData, startX, startY, fillHex) {
 
 // ─── DrawingCanvas ────────────────────────────────────────────────────────────
 
-function DrawingCanvas({ onExport }) {
+function DrawingCanvas({ onExport, onFirstMark }) {
   const containerRef = useRef(null)
   const canvasRef = useRef(null)
   const fabricRef = useRef(null)
@@ -74,6 +74,8 @@ function DrawingCanvas({ onExport }) {
   const redoStackRef = useRef([])
   const onExportRef = useRef(onExport)
   onExportRef.current = onExport
+  const onFirstMarkRef = useRef(onFirstMark)
+  onFirstMarkRef.current = onFirstMark
   const touchCleanupRef = useRef(null)
   const zoomRef = useRef(1)
   const pinchRef = useRef(null)
@@ -137,6 +139,7 @@ function DrawingCanvas({ onExport }) {
       canvas.on("path:created", () => {
         historyRef.current.push(JSON.stringify(canvas.toJSON()))
         redoStackRef.current = []
+        onFirstMarkRef.current?.()
       })
       canvas.on("mouse:down", (opt) => {
         if (toolModeRef.current !== "bucket") return
@@ -388,6 +391,13 @@ function sampleIdeas(categories, excludeSet, count = 3) {
   return cats.slice(0, count).map(({ pool }) => pool[Math.floor(Math.random() * pool.length)])
 }
 
+function formatPendingNames(players) {
+  const names = players.map(p => p.name)
+  if (names.length === 1) return names[0]
+  if (names.length === 2) return `${names[0]} and ${names[1]}`
+  return `${names[0]}, ${names[1]}, and ${names.length - 2} more`
+}
+
 export default function Play({ params }) {
   const router = useRouter()
   const code = useMemo(() => params.code.toUpperCase(), [params.code])
@@ -405,6 +415,7 @@ export default function Play({ params }) {
 
   // Drawing phase
   const getDrawingRef = useRef(null)
+  const [drawingDirty, setDrawingDirty] = useState(false)
 
   // Reveal phase
   const [advancing, setAdvancing] = useState(false)
@@ -535,6 +546,11 @@ export default function Play({ params }) {
       }))
       .filter(c => c.steps.length > 0)
   }, [players, steps])
+
+  // Reset drawing dirty flag on each new step
+  useEffect(() => {
+    setDrawingDirty(false)
+  }, [currentStep])
 
   // Auto-advance through bot chains in dummy games
   useEffect(() => {
@@ -1070,10 +1086,11 @@ export default function Play({ params }) {
 
   const isDrawingStep = currentStep % 2 === 1
 
-  // Keep auto-submit ref pointed at the current submit function
+  // Keep auto-submit ref pointed at the current submit function.
+  // Don't auto-submit if the player hasn't drawn/written anything — just hide the timer.
   timedAutoSubmitRef.current = myStepSubmitted ? null : isDrawingStep
-    ? handleSubmitDrawing
-    : () => handleSubmitSentence(sentenceRef.current.trim() || "(passed)")
+    ? (drawingDirty ? handleSubmitDrawing : null)
+    : (sentenceRef.current.trim() ? () => handleSubmitSentence(sentenceRef.current.trim()) : null)
 
   const timerColor = timeLeft !== null && timeLeft <= 10 ? "#F04F52" : "rgba(255,255,255,0.65)"
 
@@ -1083,10 +1100,16 @@ export default function Play({ params }) {
     const submittedPlayerIds = new Set(steps.filter(s => s.step_number === currentStep).map(s => s.author_id))
 
     if (myStepSubmitted) {
+      const pendingDrawers = players.filter(p => !submittedPlayerIds.has(p.id))
       return (
         <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px" }}>
           <p style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Drawing submitted.</p>
           <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 28 }}>Waiting for everyone else…</p>
+          {timeLeft !== null && timeLeft <= 0 && pendingDrawers.length > 0 && (
+            <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.65)", marginBottom: 16 }}>
+              Waiting for {formatPendingNames(pendingDrawers)} to draw.
+            </p>
+          )}
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {players.map(p => {
               const done = submittedPlayerIds.has(p.id)
@@ -1115,12 +1138,12 @@ export default function Play({ params }) {
 
         {/* Canvas — fills remaining space */}
         <div style={{ flex: 1, minHeight: 0 }}>
-          <DrawingCanvas onExport={fn => { getDrawingRef.current = fn }} />
+          <DrawingCanvas onExport={fn => { getDrawingRef.current = fn }} onFirstMark={() => setDrawingDirty(true)} />
         </div>
 
         {/* Submit */}
         <div style={{ flexShrink: 0, padding: "12px 24px", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
-          {timeLeft !== null && (
+          {timeLeft !== null && (timeLeft > 0 || drawingDirty) && (
             <p style={{ fontSize: 14, fontWeight: 800, color: timerColor, textAlign: "center", marginBottom: 8 }}>⏱ {timeLeft}s</p>
           )}
           <button
@@ -1140,12 +1163,18 @@ export default function Play({ params }) {
 
   if (myStepSubmitted) {
     const submittedPlayerIds = new Set(steps.filter(s => s.step_number === currentStep).map(s => s.author_id))
+    const pendingWriters = players.filter(p => !submittedPlayerIds.has(p.id))
     return (
       <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px" }}>
         <p style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
           {isFirstStep ? "Sentence locked in." : "Answer locked in."}
         </p>
         <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 28 }}>Waiting for everyone else…</p>
+        {timeLeft !== null && timeLeft <= 0 && pendingWriters.length > 0 && (
+          <p style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.65)", marginBottom: 16 }}>
+            Waiting for {formatPendingNames(pendingWriters)} to write.
+          </p>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {players.map(p => {
             const done = submittedPlayerIds.has(p.id)
@@ -1211,7 +1240,7 @@ export default function Play({ params }) {
           }}
         />
 
-        {timeLeft !== null && (
+        {timeLeft !== null && (timeLeft > 0 || sentence.trim()) && (
           <p style={{ fontSize: 14, fontWeight: 800, color: timerColor, marginTop: 8 }}>⏱ {timeLeft}s</p>
         )}
         <button
