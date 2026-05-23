@@ -129,7 +129,8 @@ function DrawingCanvas({ onExport }) {
       if (cancelled || !canvasRef.current || !containerRef.current) return
       fabricLibRef.current = fabric
       const w = containerRef.current.clientWidth
-      const canvas = new fabric.Canvas(canvasRef.current, { isDrawingMode: true, width: w, height: w, backgroundColor: "#ffffff" })
+      const h = containerRef.current.clientHeight || w
+      const canvas = new fabric.Canvas(canvasRef.current, { isDrawingMode: true, width: w, height: h, backgroundColor: "#ffffff" })
       canvas.freeDrawingBrush.color = "#000000"
       canvas.freeDrawingBrush.width = 8
       canvas.on("path:created", () => {
@@ -253,9 +254,9 @@ function DrawingCanvas({ onExport }) {
   const BTN_SEC = "rgba(255,255,255,0.15)"
 
   return (
-    <div ref={containerRef}>
-      {/* Canvas — full-width, square, with floating zoom-out button */}
-      <div style={{ position: "relative", cursor: toolMode === "bucket" ? "crosshair" : "default" }}>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {/* Canvas — fills available height, with floating zoom-out button */}
+      <div ref={containerRef} style={{ flex: 1, minHeight: 0, position: "relative", cursor: toolMode === "bucket" ? "crosshair" : "default" }}>
         <canvas ref={canvasRef} style={{ display: "block", touchAction: "none" }} />
         {zoomState > 1.05 && (
           <button onClick={handleResetZoom} style={{
@@ -1093,31 +1094,27 @@ export default function Play({ params }) {
     }
 
     return (
-      <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1, overflowY: "auto", paddingBottom: 100 }}>
-          <div style={{ padding: "24px 24px 12px" }}>
-            <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.45, marginBottom: 10 }}>
-              DRAW THIS
-            </div>
-            <div style={{
-              fontSize: 20, fontWeight: 800, lineHeight: 1.35,
-              background: "rgba(255,255,255,0.1)", padding: "14px 16px", borderRadius: 8, marginBottom: 4,
-            }}>
-              {prompt}
-            </div>
-          </div>
+      <div style={{ height: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        {/* Compact header */}
+        <div style={{ flexShrink: 0, padding: "12px 24px 10px" }}>
+          <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", opacity: 0.65, marginBottom: 6 }}>Draw this</div>
+          <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.35 }}>{prompt}</div>
+        </div>
+
+        {/* Canvas — fills remaining space */}
+        <div style={{ flex: 1, minHeight: 0 }}>
           <DrawingCanvas onExport={fn => { getDrawingRef.current = fn }} />
         </div>
-        <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: BG, padding: "16px 24px", paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+
+        {/* Submit */}
+        <div style={{ flexShrink: 0, padding: "12px 24px", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
           {timeLeft !== null && (
-            <p style={{ fontSize: 14, fontWeight: 800, color: timerColor, textAlign: "center", marginBottom: 10 }}>
-              ⏱ {timeLeft}s
-            </p>
+            <p style={{ fontSize: 14, fontWeight: 800, color: timerColor, textAlign: "center", marginBottom: 8 }}>⏱ {timeLeft}s</p>
           )}
           <button
             onClick={handleSubmitDrawing}
             disabled={submitting}
-            style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "20px", width: "100%", display: "block", borderRadius: 8 }}
+            style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "20px", width: "100%", display: "block" }}
           >
             {submitting ? "Submitting…" : "Done drawing"}
           </button>
