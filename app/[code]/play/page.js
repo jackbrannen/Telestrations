@@ -434,17 +434,22 @@ export default function Play({ params }) {
   // Finished screen
   const [selectedChainOwner, setSelectedChainOwner] = useState(null)
 
+  // Timer
+  const [timeLeft, setTimeLeft] = useState(null)
+
   // Track previous phase so we don't auto-redirect when game resets after finishing
   const prevPhaseRef = useRef(null)
   const channelRef = useRef(null)
   const typingTimerRef = useRef(null)
   const [presenceState, setPresenceState] = useState({})
+  const timedAutoSubmitRef = useRef(null)
+  const sentenceRef = useRef("")
 
   const me = players.find(p => p.id === myPlayerId)
 
   async function loadState() {
     const { data: gameData } = await supabase
-      .from("tel_games").select("phase,is_dummy,current_step,total_steps,reveal_order,current_reveal_chain,current_reveal_step").eq("code", code).single()
+      .from("tel_games").select("phase,is_dummy,current_step,total_steps,reveal_order,current_reveal_chain,current_reveal_step,timer_seconds,step_started_at").eq("code", code).single()
 
     if (!gameData) { router.replace(`/${code}`); return }
     if (gameData.phase === "lobby") {
@@ -596,11 +601,12 @@ export default function Play({ params }) {
     await loadState()
   }
 
-  async function handleSubmitSentence() {
-    if (!sentence.trim() || !myChainOwner || submitting || myStepSubmitted) return
+  async function handleSubmitSentence(forcedText) {
+    const text = forcedText !== undefined ? forcedText : sentence
+    if (!text.trim() || !myChainOwner || submitting || myStepSubmitted) return
     setSubmitting(true)
     try {
-      await submitStep(myChainOwner.id, currentStep, "text", sentence.trim())
+      await submitStep(myChainOwner.id, currentStep, "text", text.trim())
       setSentence("")
     } catch (e) {
       alert("Error submitting: " + e.message)
@@ -692,6 +698,149 @@ export default function Play({ params }) {
       presences.filter(p => p.typing && p.playerId !== myPlayerId).map(p => p.playerId)
     )
   )
+
+  sentenceRef.current = sentence
+
+  // ── Timer countdown ───────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!game?.timer_seconds || !game?.step_started_at || game?.phase !== "play") {
+      setTimeLeft(null)
+      return
+    }
+    const startMs = new Date(game.step_started_at).getTime()
+    const durationMs = game.timer_seconds * 1000
+    let fired = false
+
+    const tick = () => {
+      const left = Math.max(0, Math.ceil((startMs + durationMs - Date.now()) / 1000))
+      setTimeLeft(left)
+      if (left <= 0 && !fired) {
+        fired = true
+        timedAutoSubmitRef.current?.()
+      }
+    }
+    tick()
+    const id = setInterval(tick, 500)
+    return () => clearInterval(id)
+  }, [game?.timer_seconds, game?.step_started_at, game?.phase, game?.current_step])
+
+  // ── Image strip export ────────────────────────────────────────────────────
+
+  async function handleDownloadChainImage(chain) {
+    const W = 640
+    const HEADER_H = 48
+    const IMG_H = Math.round(W * 0.72)
+    const TEXT_PAD = 24
+    const TEXT_LINE_H = 32
+    const MAX_TEXT_LINES = 5
+
+    async function loadImg(url) {
+      const resp = await fetch(url)
+      const blob = await resp.blob()
+      const objUrl = URL.createObjectURL(blob)
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => { URL.revokeObjectURL(objUrl); resolve(img) }
+        img.onerror = () => resolve(null)
+        img.src = objUrl
+      })
+    }
+
+    function wrapText(ctx, text, maxWidth) {
+      const words = text.split(" ")
+      const lines = []
+      let line = ""
+      for (const word of words) {
+        const test = line ? line + " " + word : word
+        if (ctx.measureText(test).width > maxWidth && line) {
+          lines.push(line)
+          line = word
+        } else {
+          line = test
+        }
+      }
+      if (line) lines.push(line)
+      return lines.slice(0, MAX_TEXT_LINES)
+    }
+
+    const images = {}
+    await Promise.all(chain.steps.map(async s => {
+      if (s.step_type === "drawing") images[s.id] = await loadImg(s.content)
+    }))
+
+    // Measure canvas height
+    const TITLE_H = 72
+    let totalH = TITLE_H
+    for (const s of chain.steps) {
+      totalH += HEADER_H
+      totalH += s.step_type === "drawing" ? IMG_H : (TEXT_PAD * 2 + TEXT_LINE_H * 3)
+    }
+
+    const canvas = document.createElement("canvas")
+    canvas.width = W
+    canvas.height = totalH
+    const ctx = canvas.getContext("2d")
+
+    // Background
+    ctx.fillStyle = "#2B0F6B"
+    ctx.fillRect(0, 0, W, totalH)
+
+    // Title
+    ctx.fillStyle = "#1A0840"
+    ctx.fillRect(0, 0, W, TITLE_H)
+    ctx.fillStyle = "rgba(255,255,255,0.9)"
+    ctx.font = "900 22px -apple-system, Arial, sans-serif"
+    ctx.textBaseline = "middle"
+    ctx.fillText(`${chain.owner.name}'s telestration`, 24, TITLE_H / 2)
+
+    let y = TITLE_H
+    for (const s of chain.steps) {
+      const author = players.find(p => p.id === s.author_id)
+      const label = s.step_type === "drawing" ? `${author?.name ?? "?"} drew:` : `${author?.name ?? "?"} wrote:`
+
+      // Step header
+      ctx.fillStyle = "#200C52"
+      ctx.fillRect(0, y, W, HEADER_H)
+      ctx.fillStyle = "rgba(255,255,255,0.65)"
+      ctx.font = "700 16px -apple-system, Arial, sans-serif"
+      ctx.textBaseline = "middle"
+      ctx.fillText(label, 20, y + HEADER_H / 2)
+      y += HEADER_H
+
+      if (s.step_type === "drawing") {
+        const img = images[s.id]
+        if (img) {
+          ctx.drawImage(img, 0, y, W, IMG_H)
+        } else {
+          ctx.fillStyle = "#fff"
+          ctx.fillRect(0, y, W, IMG_H)
+        }
+        y += IMG_H
+      } else {
+        const textH = TEXT_PAD * 2 + TEXT_LINE_H * 3
+        ctx.fillStyle = "#ffffff"
+        ctx.fillRect(0, y, W, textH)
+        ctx.fillStyle = "#1a1a1a"
+        ctx.font = "700 20px -apple-system, Arial, sans-serif"
+        ctx.textBaseline = "top"
+        const lines = wrapText(ctx, s.content, W - TEXT_PAD * 2)
+        const blockH = lines.length * TEXT_LINE_H
+        const startY = y + TEXT_PAD + Math.max(0, (textH - TEXT_PAD * 2 - blockH) / 2)
+        lines.forEach((line, i) => ctx.fillText(line, TEXT_PAD, startY + i * TEXT_LINE_H))
+        y += textH
+      }
+    }
+
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${chain.owner.name.replace(/\s+/g, "-")}-telestration.png`
+      a.click()
+      URL.revokeObjectURL(url)
+    }, "image/png")
+  }
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
@@ -788,7 +937,13 @@ export default function Play({ params }) {
               </div>
             </div>
             <div style={{ padding: "16px 24px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: "rgba(0,0,0,0.95)", borderTop: "1px solid rgba(255,255,255,0.12)" }}>
-              <div style={{ maxWidth: 480, margin: "0 auto" }}>
+              <div style={{ maxWidth: 480, margin: "0 auto", display: "flex", flexDirection: "column", gap: 8 }}>
+                <button
+                  onClick={() => handleDownloadChainImage(modalChain)}
+                  style={{ background: YELLOW, color: "#000", fontSize: 16, fontWeight: 900, padding: "16px", width: "100%", borderRadius: 8 }}
+                >
+                  Download as image
+                </button>
                 <button
                   onClick={() => setSelectedChainOwner(null)}
                   style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 16, fontWeight: 700, padding: "16px", width: "100%", borderRadius: 8 }}
@@ -936,18 +1091,38 @@ export default function Play({ params }) {
   }
 
   const isDrawingStep = currentStep % 2 === 1
-  const stepProgress = `${submittedCount} of ${n} done`
+
+  // Keep auto-submit ref pointed at the current submit function
+  timedAutoSubmitRef.current = myStepSubmitted ? null : isDrawingStep
+    ? handleSubmitDrawing
+    : () => handleSubmitSentence(sentenceRef.current.trim() || "(passed)")
+
+  const timerColor = timeLeft !== null && timeLeft <= 10 ? "#F04F52" : "rgba(255,255,255,0.65)"
 
   // Drawing step
   if (isDrawingStep) {
     const prompt = myPrevStepContent?.content ?? "…"
+    const submittedPlayerIds = new Set(steps.filter(s => s.step_number === currentStep).map(s => s.author_id))
 
     if (myStepSubmitted) {
       return (
-        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px", textAlign: "center" }}>
+        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px" }}>
           <p style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Drawing submitted.</p>
-          <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 24 }}>Waiting for everyone else…</p>
-          <p style={{ fontSize: 13, opacity: 0.35, fontWeight: 700 }}>{stepProgress}</p>
+          <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 28 }}>Waiting for everyone else…</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {players.map(p => {
+              const done = submittedPlayerIds.has(p.id)
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", padding: "12px 16px" }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: done ? "#12BAAA" : "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+                  <span style={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
+                    {p.name}
+                    {p.id === myPlayerId && <span style={{ fontSize: 11, opacity: 0.65, marginLeft: 6 }}>you</span>}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )
     }
@@ -971,6 +1146,11 @@ export default function Play({ params }) {
           </div>
         </div>
         <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: BG, padding: "16px 24px", paddingBottom: "max(16px, env(safe-area-inset-bottom))" }}>
+          {timeLeft !== null && (
+            <p style={{ fontSize: 14, fontWeight: 800, color: timerColor, textAlign: "center", marginBottom: 10 }}>
+              ⏱ {timeLeft}s
+            </p>
+          )}
           <button
             onClick={handleSubmitDrawing}
             disabled={submitting}
@@ -1059,8 +1239,11 @@ export default function Play({ params }) {
           }}
         />
 
+        {timeLeft !== null && (
+          <p style={{ fontSize: 14, fontWeight: 800, color: timerColor, marginTop: 8 }}>⏱ {timeLeft}s</p>
+        )}
         <button
-          onClick={handleSubmitSentence}
+          onClick={() => handleSubmitSentence()}
           disabled={!sentence.trim() || submitting}
           style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "18px", width: "100%", marginTop: 8, display: "block", borderRadius: 8, animation: nudgeSentence ? "nudgePulse 1.5s ease-in-out infinite" : "none" }}
         >

@@ -11,6 +11,16 @@ const MID_DARK = "#200C52"
 const WARM_LIGHT = "#3B1680"
 const MIN_PLAYERS = 5
 
+const TIMER_OPTIONS = [
+  { label: "Off", value: null },
+  { label: "15s", value: 15 },
+  { label: "30s", value: 30 },
+  { label: "45s", value: 45 },
+  { label: "60s", value: 60 },
+  { label: "90s", value: 90 },
+  { label: "2m", value: 120 },
+]
+
 const WORDS_A = [
   "MAPLE","RIVER","OCEAN","SUNRISE","VELVET","COPPER","SILVER","EMBER","FOREST","CLOUD",
   "IVORY","SAPPHIRE","SPRING","SUMMER","WINTER","AUTUMN","MORNING","MIDNIGHT","ORCHID","LANTERN",
@@ -75,14 +85,16 @@ export default function Lobby({ params }) {
   const [notFound, setNotFound] = useState(false)
   const [starting, setStarting] = useState(false)
   const [confirmingStart, setConfirmingStart] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const me = players.find(p => p.id === myPlayerId)
   const humanPlayers = players.filter(p => !p.is_bot)
+  const isHost = game?.host_id === myPlayerId || (!game?.host_id && humanPlayers[0]?.id === myPlayerId)
 
   async function loadState() {
     const { data: gameData } = await supabase
       .from("tel_games")
-      .select("code,phase,is_dummy,host_id")
+      .select("code,phase,is_dummy,host_id,timer_seconds")
       .eq("code", code)
       .single()
 
@@ -172,7 +184,6 @@ export default function Lobby({ params }) {
 
     localStorage.setItem(`tel:${code}:playerId`, data.id)
     setMyPlayerId(data.id)
-    // Don't reset joining — the join form disappears when me is set, preventing a flash back to "Join"
   }
 
   async function startGame() {
@@ -180,6 +191,11 @@ export default function Lobby({ params }) {
     setStarting(true)
     const { error } = await supabase.rpc("tel_start_game", { p_code: code })
     if (error) { alert("Failed to start: " + error.message); setStarting(false) }
+  }
+
+  async function setTimer(value) {
+    await supabase.from("tel_games").update({ timer_seconds: value }).eq("code", code)
+    loadState()
   }
 
   if (notFound) {
@@ -215,6 +231,7 @@ export default function Lobby({ params }) {
   }
 
   const canStart = humanPlayers.length >= MIN_PLAYERS
+  const timerLabel = TIMER_OPTIONS.find(o => o.value === game.timer_seconds)?.label ?? "60s"
 
   return (
     <div style={{ minHeight: "100dvh", background: BG, color: "white" }}>
@@ -232,17 +249,62 @@ export default function Lobby({ params }) {
             })()}
           </div>
         </div>
-        <button
-          onClick={async () => {
-            const url = window.location.href
-            if (navigator.share) await navigator.share({ title: `Join Telestrations — ${code}`, url })
-            else { await navigator.clipboard.writeText(url); alert("Link copied!") }
-          }}
-          style={{ background: "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 16px", flexShrink: 0, marginTop: 4 }}
-        >
-          Invite
-        </button>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0, marginTop: 4 }}>
+          <button
+            onClick={() => setSettingsOpen(s => !s)}
+            style={{ background: settingsOpen ? WARM_LIGHT : "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 14px" }}
+          >
+            ⚙ {timerLabel}
+          </button>
+          <button
+            onClick={async () => {
+              const url = window.location.href
+              if (navigator.share) await navigator.share({ title: `Join Telestrations — ${code}`, url })
+              else { await navigator.clipboard.writeText(url); alert("Link copied!") }
+            }}
+            style={{ background: "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 16px" }}
+          >
+            Invite
+          </button>
+        </div>
       </div>
+
+      {/* Settings panel */}
+      {settingsOpen && (
+        <div style={{ background: COOL_DARK, padding: "20px 24px", borderBottom: `1px solid ${MID_DARK}` }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "rgba(255,255,255,0.85)", marginBottom: 14 }}>Round timer</div>
+          {!isHost && (
+            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", fontWeight: 600, marginBottom: 12 }}>Only the host can change this.</p>
+          )}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {TIMER_OPTIONS.map(opt => {
+              const active = game.timer_seconds === opt.value
+              return (
+                <button
+                  key={String(opt.value)}
+                  onClick={() => isHost && setTimer(opt.value)}
+                  disabled={!isHost}
+                  style={{
+                    background: active ? YELLOW : "rgba(255,255,255,0.1)",
+                    color: active ? "#000" : "rgba(255,255,255,0.75)",
+                    fontSize: 15,
+                    fontWeight: 800,
+                    padding: "10px 18px",
+                    opacity: !isHost && !active ? 0.5 : 1,
+                  }}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", fontWeight: 600, marginTop: 12 }}>
+            {game.timer_seconds
+              ? `Each drawing or writing step will have a ${timerLabel} time limit. Players are auto-submitted when time runs out.`
+              : "No time limit on rounds."}
+          </p>
+        </div>
+      )}
 
       {/* Start Game CTA */}
       {canStart && me && (
@@ -325,6 +387,7 @@ export default function Lobby({ params }) {
                 <span style={{ fontSize: 17, fontWeight: 700 }}>
                   {p.name}
                   {p.id === myPlayerId && <span style={{ fontSize: 12, opacity: 0.65, marginLeft: 6 }}>you</span>}
+                  {p.id === game.host_id && <span style={{ fontSize: 12, opacity: 0.5, marginLeft: 6 }}>host</span>}
                 </span>
               </div>
             </div>
