@@ -440,7 +440,7 @@ export default function Play({ params }) {
 
   async function loadState() {
     const { data: gameData } = await supabase
-      .from("tel_games").select("*").eq("code", code).single()
+      .from("tel_games").select("phase,is_dummy,current_step,total_steps,reveal_order,current_reveal_chain,current_reveal_step").eq("code", code).single()
 
     if (!gameData) { router.replace(`/${code}`); return }
     if (gameData.phase === "lobby") {
