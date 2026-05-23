@@ -436,6 +436,9 @@ export default function Play({ params }) {
 
   // Track previous phase so we don't auto-redirect when game resets after finishing
   const prevPhaseRef = useRef(null)
+  const channelRef = useRef(null)
+  const typingTimerRef = useRef(null)
+  const [presenceState, setPresenceState] = useState({})
 
   const me = players.find(p => p.id === myPlayerId)
 
@@ -478,7 +481,13 @@ export default function Play({ params }) {
     const channel = supabase.channel(`tel-play-${code}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "tel_games", filter: `code=eq.${code}` }, loadState)
       .on("postgres_changes", { event: "*", schema: "public", table: "tel_steps", filter: `game_code=eq.${code}` }, loadState)
-      .subscribe()
+      .on("presence", { event: "sync" }, () => setPresenceState({ ...channel.presenceState() }))
+      .subscribe(async status => {
+        if (status === "SUBSCRIBED" && myPlayerId) {
+          await channel.track({ playerId: myPlayerId, typing: false })
+        }
+      })
+    channelRef.current = channel
 
     return () => { clearInterval(poll); document.removeEventListener("visibilitychange", handleVisibility); supabase.removeChannel(channel) }
   }, [code])
@@ -668,6 +677,21 @@ export default function Play({ params }) {
     await loadState()
     setAdvancing(false)
   }
+
+  function trackTyping() {
+    if (!channelRef.current || !myPlayerId) return
+    channelRef.current.track({ playerId: myPlayerId, typing: true })
+    clearTimeout(typingTimerRef.current)
+    typingTimerRef.current = setTimeout(() => {
+      if (channelRef.current) channelRef.current.track({ playerId: myPlayerId, typing: false })
+    }, 3000)
+  }
+
+  const typingPlayerIds = new Set(
+    Object.values(presenceState).flatMap(presences =>
+      presences.filter(p => p.typing && p.playerId !== myPlayerId).map(p => p.playerId)
+    )
+  )
 
   // ── Loading ───────────────────────────────────────────────────────────────
 
@@ -963,13 +987,28 @@ export default function Play({ params }) {
   const isFirstStep = currentStep === 0
 
   if (myStepSubmitted) {
+    const submittedPlayerIds = new Set(steps.filter(s => s.step_number === currentStep).map(s => s.author_id))
     return (
-      <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "32px 24px", textAlign: "center" }}>
+      <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px" }}>
         <p style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
           {isFirstStep ? "Sentence locked in." : "Answer locked in."}
         </p>
-        <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 24 }}>Waiting for everyone else…</p>
-        <p style={{ fontSize: 13, opacity: 0.35, fontWeight: 700 }}>{stepProgress}</p>
+        <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 28 }}>Waiting for everyone else…</p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {players.map(p => {
+            const done = submittedPlayerIds.has(p.id)
+            return (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", padding: "12px 16px" }}>
+                <div style={{ width: 8, height: 8, borderRadius: "50%", background: done ? "#12BAAA" : "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+                <span style={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
+                  {p.name}
+                  {p.id === myPlayerId && <span style={{ fontSize: 11, opacity: 0.65, marginLeft: 6 }}>you</span>}
+                  {!done && typingPlayerIds.has(p.id) && <span style={{ fontSize: 14, marginLeft: 6 }}>💬</span>}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       </div>
     )
   }
@@ -1007,7 +1046,7 @@ export default function Play({ params }) {
 
         <textarea
           value={sentence}
-          onChange={e => setSentence(e.target.value)}
+          onChange={e => { setSentence(e.target.value); trackTyping() }}
           placeholder={isFirstStep ? 'e.g. "A squid getting sued"' : "Write what you see…"}
           maxLength={200}
           rows={3}
