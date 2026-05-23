@@ -6,6 +6,9 @@ import { supabase } from "../../lib/supabase"
 
 const BG = "#2B0F6B"
 const YELLOW = "#FBDF54"
+const COOL_DARK = "#1A0840"
+const MID_DARK = "#200C52"
+const WARM_LIGHT = "#3B1680"
 const MIN_PLAYERS = 5
 
 const WORDS_A = [
@@ -70,6 +73,8 @@ export default function Lobby({ params }) {
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState("")
   const [notFound, setNotFound] = useState(false)
+  const [starting, setStarting] = useState(false)
+  const [confirmingStart, setConfirmingStart] = useState(false)
 
   const me = players.find(p => p.id === myPlayerId)
   const humanPlayers = players.filter(p => !p.is_bot)
@@ -171,8 +176,10 @@ export default function Lobby({ params }) {
   }
 
   async function startGame() {
+    if (starting) return
+    setStarting(true)
     const { error } = await supabase.rpc("tel_start_game", { p_code: code })
-    if (error) alert("Failed to start: " + error.message)
+    if (error) { alert("Failed to start: " + error.message); setStarting(false) }
   }
 
   if (notFound) {
@@ -244,10 +251,11 @@ export default function Lobby({ params }) {
             All players in?
           </div>
           <button
-            onClick={startGame}
+            onClick={() => setConfirmingStart(true)}
+            disabled={starting}
             style={{ background: "#000", color: YELLOW, fontSize: 24, fontWeight: 900, padding: "20px", width: "100%", display: "block" }}
           >
-            Start Game
+            {starting ? "Starting…" : "Start Game"}
           </button>
         </div>
       )}
@@ -301,29 +309,78 @@ export default function Lobby({ params }) {
 
       {/* Players */}
       <div style={{ padding: "28px 24px 40px" }}>
-        <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.15em", color: "rgba(255,255,255,0.4)", marginBottom: 14 }}>
+        <div style={{ fontSize: 17, fontWeight: 800, color: "rgba(255,255,255,0.85)", marginBottom: 14 }}>
           Players
         </div>
-        <div style={{ background: "rgba(0,0,0,0.28)", padding: "4px 14px 10px", borderTop: "3px solid rgba(255,255,255,0.30)" }}>
-          {humanPlayers.length === 0 && (
-            <div style={{ fontSize: 14, opacity: 0.4, fontStyle: "italic", paddingTop: 10 }}>No players yet</div>
-          )}
-          {humanPlayers.map(p => (
-            <div key={p.id} style={{ padding: "10px 0", borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
-              <span style={{ fontSize: 17, fontWeight: 700 }}>
-                {p.name}
-                {p.id === myPlayerId && <span style={{ fontSize: 12, fontWeight: 600, opacity: 0.45, marginLeft: 6 }}>you</span>}
-              </span>
+        {humanPlayers.length === 0 && (
+          <div style={{ fontSize: 15, opacity: 0.65, padding: "14px 0" }}>No players yet.</div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          {humanPlayers.map((p, i) => (
+            <div key={p.id} style={{ display: "flex" }}>
+              <div style={{ padding: "13px 0", minWidth: 48, flexShrink: 0, background: COOL_DARK, fontSize: 18, fontWeight: 900, color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                {i + 1}
+              </div>
+              <div style={{ padding: "13px 16px", flex: 1, background: MID_DARK, display: "flex", alignItems: "center" }}>
+                <span style={{ fontSize: 17, fontWeight: 700 }}>
+                  {p.name}
+                  {p.id === myPlayerId && <span style={{ fontSize: 12, opacity: 0.65, marginLeft: 6 }}>you</span>}
+                </span>
+              </div>
             </div>
           ))}
         </div>
         {humanPlayers.length < MIN_PLAYERS && (
-          <p style={{ fontSize: 13, opacity: 0.4, fontWeight: 600, marginTop: 10 }}>
+          <p style={{ fontSize: 13, opacity: 0.65, fontWeight: 600, marginTop: 12 }}>
             Minimum {MIN_PLAYERS} players needed.
           </p>
         )}
       </div>
 
+      {/* Confirm start modal */}
+      {confirmingStart && (
+        <div
+          onClick={() => setConfirmingStart(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, zIndex: 100 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: MID_DARK, width: "100%", maxWidth: 400, padding: "28px 24px" }}
+          >
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: "white", marginBottom: 8 }}>Start the game?</h2>
+            <p style={{ fontSize: 15, color: "white", opacity: 0.75, fontWeight: 600, marginBottom: 20 }}>
+              Each player draws, then guesses, then draws — are all players in?
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 24 }}>
+              {humanPlayers.map((p, i) => (
+                <div key={p.id} style={{ display: "flex" }}>
+                  <div style={{ padding: "10px 0", minWidth: 40, flexShrink: 0, background: COOL_DARK, fontSize: 15, fontWeight: 900, color: "white", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {i + 1}
+                  </div>
+                  <div style={{ padding: "10px 14px", flex: 1, background: WARM_LIGHT, display: "flex", alignItems: "center" }}>
+                    <span style={{ fontSize: 16, fontWeight: 700, color: "white" }}>
+                      {p.name}
+                      {p.id === myPlayerId && <span style={{ fontSize: 12, opacity: 0.65, marginLeft: 6 }}>you</span>}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={() => setConfirmingStart(false)} style={{ flex: 1, background: WARM_LIGHT, color: "white", fontSize: 17, fontWeight: 800, padding: "16px" }}>
+                Cancel
+              </button>
+              <button
+                onClick={() => { setConfirmingStart(false); startGame() }}
+                disabled={starting}
+                style={{ flex: 2, background: YELLOW, color: "#000", fontSize: 17, fontWeight: 900, padding: "16px" }}
+              >
+                {starting ? "Starting…" : "Start Game"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
