@@ -4,9 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
 import { useSubmitNudge } from "../../../lib/useSubmitNudge"
+import PokeSystem, { FOOTER_H } from "../../../components/PokeSystem"
 
 const BG = "#2B0F6B"
 const YELLOW = "#FBDF54"
+
+const POKE_COLORS = { dark: "#1A0840", mid: "#200C52", wl: "#4A228C", yellow: "#FBDF54", notifBg: "#15062A" }
+const BOTTOM_PAD = `calc(${FOOTER_H + 8}px + env(safe-area-inset-bottom))`
 
 const PALETTE = [
   // Neutrals
@@ -836,6 +840,20 @@ export default function Play({ params }) {
     }, "image/png")
   }
 
+  // ── PokeSystem (rendered on every screen) ────────────────────────────────
+
+  const pokeSystemNode = me ? (
+    <PokeSystem
+      colors={POKE_COLORS}
+      roomCode={code}
+      currentPlayer={me.name}
+      allPlayers={players.map(p => p.name)}
+      playerDetails={players.map(p => ({ name: p.name, firstName: p.first_name, lastName: p.last_name }))}
+      gamePhase={game?.phase}
+      onResetToLobby={async () => { await supabase.rpc("tel_reset_game", { p_code: code }) }}
+    />
+  ) : null
+
   // ── Loading ───────────────────────────────────────────────────────────────
 
   if (!game || !me) {
@@ -854,7 +872,8 @@ export default function Play({ params }) {
       : null
 
     return (
-      <div style={{ minHeight: "100dvh", background: BG, color: "white" }}>
+      <>
+      <div style={{ minHeight: "100dvh", background: BG, color: "white", paddingBottom: FOOTER_H }}>
         {/* Header */}
         <div style={{ padding: "36px 24px 24px", textAlign: "center" }}>
           <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-1px", marginBottom: 8 }}>That's a wrap!</h1>
@@ -947,6 +966,8 @@ export default function Play({ params }) {
           </div>
         )}
       </div>
+      {pokeSystemNode}
+    </>
     )
   }
 
@@ -959,7 +980,8 @@ export default function Play({ params }) {
     // Waiting for presenter to start (step = -1, not presenter)
     if (currentRevealStep === -1 && !amPresenter) {
       return (
-        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", textAlign: "center" }}>
+        <>
+        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 24px", textAlign: "center", paddingBottom: FOOTER_H }}>
           <div style={{ fontSize: 13, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.5, marginBottom: 16 }}>
             REVEAL PHASE
           </div>
@@ -968,13 +990,16 @@ export default function Play({ params }) {
           </h2>
           <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500 }}>Get ready…</p>
         </div>
+        {pokeSystemNode}
+        </>
       )
     }
 
     // Presenter intro screen (step = -1, is presenter)
     if (currentRevealStep === -1 && amPresenter) {
       return (
-        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px" }}>
+        <>
+        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px", paddingBottom: FOOTER_H }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.45, marginBottom: 8 }}>
             YOUR TELESTRATION
           </div>
@@ -990,6 +1015,8 @@ export default function Play({ params }) {
             Reveal my telestration
           </button>
         </div>
+        {pokeSystemNode}
+        </>
       )
     }
 
@@ -997,7 +1024,8 @@ export default function Play({ params }) {
     if (!amPresenter) {
       const visibleSteps = currentChainSteps.slice(0, currentRevealStep + 1)
       return (
-        <div style={{ minHeight: "100dvh", background: BG, color: "white" }}>
+        <>
+        <div style={{ minHeight: "100dvh", background: BG, color: "white", paddingBottom: FOOTER_H }}>
           <div style={{ padding: "28px 24px 20px", background: "rgba(0,0,0,0.3)" }}>
             <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.45, marginBottom: 4 }}>
               CHAIN {currentRevealChain + 1} OF {n}
@@ -1016,12 +1044,15 @@ export default function Play({ params }) {
             )}
           </div>
         </div>
+        {pokeSystemNode}
+        </>
       )
     }
 
     // Presenter view (active reveal) — Reveal button overlaid on the next card
     return (
-      <div style={{ minHeight: "100dvh", background: BG, color: "white", paddingBottom: allStepsRevealed ? 100 : 0 }}>
+      <>
+      <div style={{ minHeight: "100dvh", background: BG, color: "white", paddingBottom: allStepsRevealed ? FOOTER_H + 80 : FOOTER_H }}>
         <div style={{ padding: "28px 24px 20px", background: "rgba(0,0,0,0.3)" }}>
           <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.45, marginBottom: 4 }}>
             YOUR TELESTRATION
@@ -1060,7 +1091,7 @@ export default function Play({ params }) {
         </div>
 
         {allStepsRevealed && (
-          <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "16px 24px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
+          <div style={{ position: "fixed", bottom: FOOTER_H, left: 0, right: 0, padding: "16px 24px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
             <button
               onClick={handleNextChain}
               disabled={advancing}
@@ -1071,6 +1102,8 @@ export default function Play({ params }) {
           </div>
         )}
       </div>
+      {pokeSystemNode}
+      </>
     )
   }
 
@@ -1078,9 +1111,12 @@ export default function Play({ params }) {
 
   if (!myChainOwner) {
     return (
+      <>
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 18, fontWeight: 700 }}>Loading…</p>
       </div>
+      {pokeSystemNode}
+      </>
     )
   }
 
@@ -1102,7 +1138,8 @@ export default function Play({ params }) {
     if (myStepSubmitted) {
       const pendingDrawers = players.filter(p => !submittedPlayerIds.has(p.id))
       return (
-        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px" }}>
+        <>
+        <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px", paddingBottom: FOOTER_H }}>
           <p style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Drawing submitted.</p>
           <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500, marginBottom: 28 }}>Waiting for everyone else…</p>
           {timeLeft !== null && timeLeft <= 0 && pendingDrawers.length > 0 && (
@@ -1125,10 +1162,13 @@ export default function Play({ params }) {
             })}
           </div>
         </div>
+        {pokeSystemNode}
+        </>
       )
     }
 
     return (
+      <>
       <div style={{ height: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Compact header */}
         <div style={{ flexShrink: 0, padding: "12px 24px 10px" }}>
@@ -1142,7 +1182,7 @@ export default function Play({ params }) {
         </div>
 
         {/* Submit */}
-        <div style={{ flexShrink: 0, padding: "12px 24px", paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}>
+        <div style={{ flexShrink: 0, padding: "12px 24px", paddingBottom: BOTTOM_PAD }}>
           {timeLeft !== null && (timeLeft > 0 || drawingDirty) && (
             <p style={{ fontSize: 14, fontWeight: 800, color: timerColor, textAlign: "center", marginBottom: 8 }}>⏱ {timeLeft}s</p>
           )}
@@ -1155,6 +1195,8 @@ export default function Play({ params }) {
           </button>
         </div>
       </div>
+      {pokeSystemNode}
+      </>
     )
   }
 
@@ -1165,7 +1207,8 @@ export default function Play({ params }) {
     const submittedPlayerIds = new Set(steps.filter(s => s.step_number === currentStep).map(s => s.author_id))
     const pendingWriters = players.filter(p => !submittedPlayerIds.has(p.id))
     return (
-      <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px" }}>
+      <>
+      <div style={{ minHeight: "100dvh", background: BG, color: "white", display: "flex", flexDirection: "column", padding: "40px 24px", paddingBottom: FOOTER_H }}>
         <p style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>
           {isFirstStep ? "Sentence locked in." : "Answer locked in."}
         </p>
@@ -1191,12 +1234,15 @@ export default function Play({ params }) {
           })}
         </div>
       </div>
+      {pokeSystemNode}
+      </>
     )
   }
 
   const drawingToDescribe = myPrevStepContent?.content ?? null
 
   return (
+    <>
     <div style={{ minHeight: "100dvh", background: BG, color: "white" }}>
       <div style={{ padding: "28px 24px 0" }}>
         <div style={{ fontSize: 11, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.18em", opacity: 0.45, marginBottom: 10 }}>
@@ -1295,5 +1341,7 @@ export default function Play({ params }) {
         <div style={{ height: 40 }} />
       </div>
     </div>
+    {pokeSystemNode}
+    </>
   )
 }
