@@ -254,8 +254,46 @@ function DrawingCanvas({ onExport }) {
 
   return (
     <div ref={containerRef}>
+      {/* Canvas — full-width, square, with floating zoom-out button */}
+      <div style={{ position: "relative", cursor: toolMode === "bucket" ? "crosshair" : "default" }}>
+        <canvas ref={canvasRef} style={{ display: "block", touchAction: "none" }} />
+        {zoomState > 1.05 && (
+          <button onClick={handleResetZoom} style={{
+            position: "absolute", bottom: 10, right: 10,
+            width: 44, height: 44, background: "rgba(0,0,0,0.55)",
+            color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" {...iconStroke}>
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Brush sizes */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 16px 8px" }}>
+        {BRUSH_SIZES.map((sz, i) => {
+          const d = 5 + i * 4.5, active = brushSize === sz && toolMode !== "bucket"
+          return (
+            <button key={sz} onClick={() => handleSizeChange(sz)} disabled={toolMode === "bucket"}
+              style={{ width: 38, height: 38, flexShrink: 0, background: active ? BTN_SEC : "transparent", display: "flex", alignItems: "center", justifyContent: "center", border: active ? `2px solid ${YELLOW}` : "2px solid transparent" }}>
+              <div style={{ width: d, height: d, borderRadius: "50%", background: "white" }} />
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Color palette */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 16px 8px" }}>
+        {PALETTE.map(c => (
+          <button key={c} onClick={() => handleColorClick(c)}
+            style={{ width: 28, height: 28, background: c, flexShrink: 0,
+              border: color === c && toolMode !== "eraser" ? "3px solid white" : c === "#FFFFFF" || c === "#DDDDDD" ? "1px solid rgba(255,255,255,0.25)" : "2px solid transparent" }} />
+        ))}
+      </div>
+
       {/* Tool + utility row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "10px 16px 8px", flexWrap: "nowrap" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 16px 10px", flexWrap: "nowrap" }}>
         {[
           { mode: "pen", label: "Draw", icon: <svg width="18" height="18" viewBox="0 0 24 24" {...iconStroke}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> },
           { mode: "eraser", label: "Erase", icon: <svg width="18" height="18" viewBox="0 0 24 24" {...iconStroke}><path d="M20 20H7L3 16l13-13 7 7-3 3"/><path d="M6 17l4-4"/></svg> },
@@ -277,36 +315,6 @@ function DrawingCanvas({ onExport }) {
         <button onClick={handleClear} style={{ background: BTN_SEC, color: "rgba(255,255,255,0.6)", width: 40, height: 40, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" {...iconStroke}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
         </button>
-        {zoomState > 1.05 && (
-          <button onClick={handleResetZoom} style={{ background: YELLOW, color: "#000", padding: "8px 10px", fontSize: 12, fontWeight: 900, flexShrink: 0, height: 40 }}>1:1</button>
-        )}
-      </div>
-
-      {/* Brush sizes */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4, padding: "0 16px 8px" }}>
-        {BRUSH_SIZES.map((sz, i) => {
-          const d = 5 + i * 4.5, active = brushSize === sz && toolMode !== "bucket"
-          return (
-            <button key={sz} onClick={() => handleSizeChange(sz)} disabled={toolMode === "bucket"}
-              style={{ width: 38, height: 38, flexShrink: 0, background: active ? BTN_SEC : "transparent", display: "flex", alignItems: "center", justifyContent: "center", border: active ? `2px solid ${YELLOW}` : "2px solid transparent" }}>
-              <div style={{ width: d, height: d, borderRadius: "50%", background: "white" }} />
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Color palette */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, padding: "0 16px 10px" }}>
-        {PALETTE.map(c => (
-          <button key={c} onClick={() => handleColorClick(c)}
-            style={{ width: 28, height: 28, background: c, flexShrink: 0,
-              border: color === c && toolMode !== "eraser" ? "3px solid white" : c === "#FFFFFF" || c === "#DDDDDD" ? "1px solid rgba(255,255,255,0.25)" : "2px solid transparent" }} />
-        ))}
-      </div>
-
-      {/* Canvas — full-width, square */}
-      <div style={{ cursor: toolMode === "bucket" ? "crosshair" : "default" }}>
-        <canvas ref={canvasRef} style={{ display: "block", touchAction: "none" }} />
       </div>
     </div>
   )
