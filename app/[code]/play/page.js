@@ -440,6 +440,11 @@ export default function Play({ params }) {
 
   const me = players.find(p => p.id === myPlayerId)
 
+  async function sendInlinePoke(targetName) {
+    if (!me) return
+    await supabase.from("pokes").insert({ room_code: code, from_player: me.name, to_player: targetName, message: "👉" })
+  }
+
   async function loadState() {
     const { data: gameData } = await supabase
       .from("tel_games").select("phase,is_dummy,current_step,total_steps,reveal_order,current_reveal_chain,current_reveal_step,timer_seconds,step_started_at").eq("code", code).single()
@@ -1150,13 +1155,17 @@ export default function Play({ params }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {players.map(p => {
               const done = submittedPlayerIds.has(p.id)
+              const isMe = p.id === myPlayerId
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", padding: "12px 16px" }}>
                   <div style={{ width: 8, height: 8, borderRadius: "50%", background: done ? "#12BAAA" : "rgba(255,255,255,0.2)", flexShrink: 0 }} />
                   <span style={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
                     {p.name}
-                    {p.id === myPlayerId && <span style={{ fontSize: 11, opacity: 0.65, marginLeft: 6 }}>you</span>}
+                    {isMe && <span style={{ fontSize: 11, opacity: 0.65, marginLeft: 6 }}>you</span>}
                   </span>
+                  {!done && !isMe && (
+                    <button onClick={() => sendInlinePoke(p.name)} style={{ background: "transparent", color: "rgba(255,255,255,0.55)", fontSize: 20, padding: "0 4px", lineHeight: 1 }}>👉</button>
+                  )}
                 </div>
               )
             })}
@@ -1221,14 +1230,18 @@ export default function Play({ params }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {players.map(p => {
             const done = submittedPlayerIds.has(p.id)
+            const isMe = p.id === myPlayerId
             return (
               <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.08)", padding: "12px 16px" }}>
                 <div style={{ width: 8, height: 8, borderRadius: "50%", background: done ? "#12BAAA" : "rgba(255,255,255,0.2)", flexShrink: 0 }} />
                 <span style={{ fontSize: 16, fontWeight: 700, flex: 1 }}>
                   {p.name}
-                  {p.id === myPlayerId && <span style={{ fontSize: 11, opacity: 0.65, marginLeft: 6 }}>you</span>}
+                  {isMe && <span style={{ fontSize: 11, opacity: 0.65, marginLeft: 6 }}>you</span>}
                   {!done && typingPlayerIds.has(p.id) && <span style={{ fontSize: 14, marginLeft: 6 }}>💬</span>}
                 </span>
+                {!done && !isMe && (
+                  <button onClick={() => sendInlinePoke(p.name)} style={{ background: "transparent", color: "rgba(255,255,255,0.55)", fontSize: 20, padding: "0 4px", lineHeight: 1 }}>👉</button>
+                )}
               </div>
             )
           })}
