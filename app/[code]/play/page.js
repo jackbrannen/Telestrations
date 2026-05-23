@@ -78,6 +78,7 @@ function DrawingCanvas({ onExport }) {
   const zoomRef = useRef(1)
   const pinchRef = useRef(null)
   const panStartRef = useRef(null)
+  const bucketPendingRef = useRef(null)
 
   const [color, setColorState] = useState("#000000")
   const [brushSize, setBrushSize] = useState(8)
@@ -140,7 +141,10 @@ function DrawingCanvas({ onExport }) {
       canvas.on("mouse:down", (opt) => {
         if (toolModeRef.current !== "bucket") return
         const p = canvas.getPointer(opt.e)
-        doBucketFillRef.current(Math.round(p.x), Math.round(p.y))
+        bucketPendingRef.current = setTimeout(() => {
+          bucketPendingRef.current = null
+          doBucketFillRef.current(Math.round(p.x), Math.round(p.y))
+        }, 150)
       })
       fabricRef.current = canvas
       onExportRef.current(() => canvas.toDataURL({ format: "jpeg", quality: 0.72 }))
@@ -156,8 +160,7 @@ function DrawingCanvas({ onExport }) {
       function onTouchStart(e) {
         if (e.touches.length >= 2) {
           e.preventDefault(); e.stopImmediatePropagation()
-          // Clear in-progress stroke BEFORE disabling drawing mode.
-          // If we disable first, Fabric finalizes the partial first-finger stroke.
+          if (bucketPendingRef.current) { clearTimeout(bucketPendingRef.current); bucketPendingRef.current = null }
           try {
             canvas.freeDrawingBrush._points = []
             canvas.clearContext(canvas.contextTop)
