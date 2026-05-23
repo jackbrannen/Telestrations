@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "../../../lib/supabase"
+import { useSubmitNudge } from "../../../lib/useSubmitNudge"
 
 const BG = "#2B0F6B"
 const YELLOW = "#FBDF54"
@@ -510,6 +511,8 @@ export default function Play({ params }) {
     return steps.some(s => s.chain_owner_id === myChainOwner.id && s.step_number === currentStep && s.author_id === me.id)
   }, [myChainOwner, currentStep, steps, me])
 
+  const nudgeSentence = useSubmitNudge(sentence, myStepSubmitted)
+
   const submittedCount = useMemo(() => {
     return steps.filter(s => s.step_number === currentStep).length
   }, [steps, currentStep])
@@ -1016,7 +1019,7 @@ export default function Play({ params }) {
         <button
           onClick={handleSubmitSentence}
           disabled={!sentence.trim() || submitting}
-          style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "18px", width: "100%", marginTop: 8, display: "block", borderRadius: 8 }}
+          style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "18px", width: "100%", marginTop: 8, display: "block", borderRadius: 8, animation: nudgeSentence ? "nudgePulse 1.5s ease-in-out infinite" : "none" }}
         >
           {submitting ? "Submitting…" : "Lock it in"}
         </button>
