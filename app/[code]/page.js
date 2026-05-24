@@ -11,6 +11,16 @@ const MID_DARK = "#200C52"
 const WARM_LIGHT = "#3B1680"
 const MIN_PLAYERS = 5
 
+const INSTRUCTIONS = `Players: 4+ · Time: 15+ min
+
+A telephone-style game alternating between drawing and guessing.
+
+Each player starts by writing a phrase. They pass it to the next player, who draws it. That drawing passes to the next player, who guesses what it is. Their guess passes on to be drawn again, and so on down the chain.
+
+At the end, the original phrase and the final result are revealed side by side.
+
+An optional timer limits how long players have to draw or write each step.`
+
 const TIMER_OPTIONS = [
   { label: "No timer", value: null },
   { label: "1 min", value: 60 },
@@ -80,6 +90,7 @@ export default function Lobby({ params }) {
   const [joining, setJoining] = useState(false)
   const [joinError, setJoinError] = useState("")
   const [notFound, setNotFound] = useState(false)
+  const [showInstructions, setShowInstructions] = useState(false)
   const [starting, setStarting] = useState(false)
   const [confirmingStart, setConfirmingStart] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -248,6 +259,12 @@ export default function Lobby({ params }) {
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0, marginTop: 4 }}>
           <button
+            onClick={() => setShowInstructions(true)}
+            style={{ flexShrink: 0, background: "rgba(255,255,255,0.15)", color: "white", fontSize: 15, fontWeight: 800, padding: "10px 14px" }}
+          >
+            ?
+          </button>
+          <button
             onClick={() => setSettingsOpen(s => !s)}
             style={{ background: settingsOpen ? WARM_LIGHT : "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 14px" }}
           >
@@ -396,6 +413,26 @@ export default function Lobby({ params }) {
           </p>
         )}
       </div>
+
+      {showInstructions && (
+        <div
+          onClick={() => setShowInstructions(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 200, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 24, overflowY: "auto" }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "#1A1A2E", width: "100%", maxWidth: 480, padding: "28px 24px", marginTop: 24 }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>How to Play</div>
+              <button onClick={() => setShowInstructions(false)} style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 18, fontWeight: 800, padding: "6px 12px" }}>✕</button>
+            </div>
+            <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", lineHeight: 1.7, fontWeight: 400, whiteSpace: "pre-wrap" }}>
+              {INSTRUCTIONS}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirm start modal */}
       {confirmingStart && (
