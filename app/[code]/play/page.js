@@ -12,6 +12,27 @@ const YELLOW = "#FBDF54"
 const POKE_COLORS = { dark: "#1A0840", mid: "#200C52", wl: "#4A228C", yellow: "#FBDF54", notifBg: "#15062A" }
 const BOTTOM_PAD = `calc(${FOOTER_H + 8}px + env(safe-area-inset-bottom))`
 
+const ALL_GAMES = [
+  { name: "Fishbowl",         sub: "fishbowl",           color: "#3378FF" },
+  { name: "Game of What",     sub: "gameofwhat",          color: "#6B1A44" },
+  { name: "Avalon",           sub: "avalon",              color: "#0F1923" },
+  { name: "First to Worst",   sub: "firsttoworst",        color: "#004F45" },
+  { name: "Drawful",          sub: "drawful",             color: "#307977" },
+  { name: "So Clover",        sub: "soclover",            color: "#6B8C2A" },
+  { name: "Telestrations",    sub: "telestrations",       color: "#3D1060" },
+  { name: "Copycats",         sub: "copycats",            color: "#4A1A80" },
+  { name: "Codenames",        sub: "codenames",           color: "#2C2C4A" },
+  { name: "Reverse Charades", sub: "reversecharades",     color: "#1A3A1A" },
+  { name: "Exquisite Corpse", sub: "exquisite-corpse",    color: "#1A3A5C" },
+  { name: "Mr. White",        sub: "mrwhite",             color: "#1A1A2E" },
+]
+const CODE_WORDS_A = ["MAPLE","RIVER","OCEAN","SILVER","EMBER","CLOUD","STORM","FROST","AMBER","CEDAR"]
+const CODE_WORDS_B = ["RIDGE","PEAK","VALE","GROVE","CREST","BROOK","SHORE","WIND","FIELD","STONE"]
+function makeNextCode() {
+  return CODE_WORDS_A[Math.floor(Math.random() * CODE_WORDS_A.length)] +
+         CODE_WORDS_B[Math.floor(Math.random() * CODE_WORDS_B.length)]
+}
+
 const PALETTE = [
   // Neutrals
   "#000000","#2D2D2D","#666666","#AAAAAA","#DDDDDD","#FFFFFF",
@@ -450,6 +471,11 @@ export default function Play({ params }) {
     setTimeout(() => revealEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80)
   }, [game?.phase, currentRevealStep, currentRevealChain])
 
+  useEffect(() => {
+    if (!game?.next_game || !game?.next_game_code) return
+    window.location.href = `https://${game.next_game}.jackbrannen.com/${game.next_game_code}`
+  }, [game?.next_game, game?.next_game_code])
+
   const me = players.find(p => p.id === myPlayerId)
 
   async function sendInlinePoke(targetName) {
@@ -459,7 +485,7 @@ export default function Play({ params }) {
 
   async function loadState() {
     const { data: gameData } = await supabase
-      .from("tel_games").select("phase,is_dummy,current_step,total_steps,reveal_order,current_reveal_chain,current_reveal_step,timer_seconds,step_started_at").eq("code", code).single()
+      .from("tel_games").select("phase,is_dummy,current_step,total_steps,reveal_order,current_reveal_chain,current_reveal_step,timer_seconds,step_started_at,next_game,next_game_code").eq("code", code).single()
 
     if (!gameData) { router.replace(`/${code}`); return }
     if (gameData.phase === "lobby") {
@@ -883,6 +909,11 @@ export default function Play({ params }) {
     )
   }
 
+  async function pickNextGame(gameSub) {
+    const nextCode = makeNextCode()
+    await supabase.from("tel_games").update({ next_game: gameSub, next_game_code: nextCode }).eq("code", code)
+  }
+
   // ── Finished ──────────────────────────────────────────────────────────────
 
   if (game.phase === "finished") {
@@ -943,6 +974,21 @@ export default function Play({ params }) {
                 </button>
               )
             })}
+          </div>
+        </div>
+
+        {/* Play another game */}
+        <div style={{ padding: "0 24px 48px" }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "rgba(255,255,255,0.85)", marginBottom: 12 }}>
+            Play Another Game
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {ALL_GAMES.map(g => (
+              <button key={g.sub} onClick={() => pickNextGame(g.sub)}
+                style={{ background: g.color, color: "white", fontSize: 14, fontWeight: 800, padding: "16px 12px", textAlign: "left", lineHeight: 1.2 }}>
+                {g.name}
+              </button>
+            ))}
           </div>
         </div>
 
