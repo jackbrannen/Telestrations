@@ -443,6 +443,12 @@ export default function Play({ params }) {
   const [presenceState, setPresenceState] = useState({})
   const timedAutoSubmitRef = useRef(null)
   const sentenceRef = useRef("")
+  const revealEndRef = useRef(null)
+
+  useEffect(() => {
+    if (game?.phase !== "reveal" || currentRevealStep < 0) return
+    setTimeout(() => revealEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80)
+  }, [game?.phase, currentRevealStep, currentRevealChain])
 
   const me = players.find(p => p.id === myPlayerId)
 
@@ -1055,6 +1061,7 @@ export default function Play({ params }) {
                 Waiting for {currentPresenterPlayer?.name}…
               </div>
             )}
+            <div ref={revealEndRef} />
           </div>
         </div>
         {pokeSystemNode()}
@@ -1102,7 +1109,7 @@ export default function Play({ params }) {
             )
           })}
         </div>
-
+        <div ref={revealEndRef} />
       </div>
       {pokeSystemNode(
         allStepsRevealed
