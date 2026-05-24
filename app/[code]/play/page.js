@@ -473,8 +473,11 @@ export default function Play({ params }) {
 
   const me = players.find(p => p.id === myPlayerId)
 
+  const inlinePokeCooldownRef = useRef(0)
   async function sendInlinePoke(targetName) {
     if (!me) return
+    if (Date.now() < inlinePokeCooldownRef.current) return
+    inlinePokeCooldownRef.current = Date.now() + 10000
     await supabase.from("pokes").insert({ room_code: code, from_player: me.name, to_player: targetName, message: "👉" })
   }
 
