@@ -154,7 +154,13 @@ function DrawingCanvas({ onExport, onFirstMark }) {
         }, 150)
       })
       fabricRef.current = canvas
-      onExportRef.current(() => canvas.toDataURL({ format: "jpeg", quality: 0.72 }))
+      onExportRef.current(() => {
+        const savedVT = [...canvas.viewportTransform]
+        canvas.setViewportTransform([1, 0, 0, 1, 0, 0])
+        const url = canvas.toDataURL({ format: "jpeg", quality: 0.72 })
+        canvas.setViewportTransform(savedVT)
+        return url
+      })
 
       // ── Pinch-to-zoom ─────────────────────────────────────────────────────
       function clampVP() {
@@ -509,9 +515,11 @@ export default function Play({ params }) {
 
   const myChainOwner = useMemo(() => {
     if (!me || n === 0) return null
-    const ownerSeat = ((me.seat - currentStep) % n + n) % n
+    const passOffsets = game?.pass_offsets ?? null
+    const offset = currentStep === 0 ? 0 : (passOffsets?.[currentStep - 1] ?? currentStep)
+    const ownerSeat = ((me.seat - offset) % n + n) % n
     return players.find(p => p.seat === ownerSeat) ?? null
-  }, [me, currentStep, n, players])
+  }, [me, currentStep, n, players, game?.pass_offsets])
 
   const myPrevStepContent = useMemo(() => {
     if (!myChainOwner || currentStep === 0) return null
@@ -847,7 +855,7 @@ export default function Play({ params }) {
 
   // ── PokeSystem (rendered on every screen) ────────────────────────────────
 
-  const pokeSystemNode = me ? (
+  const pokeSystemNode = (footer = null) => me ? (
     <PokeSystem
       colors={POKE_COLORS}
       roomCode={code}
@@ -856,7 +864,7 @@ export default function Play({ params }) {
       playerDetails={players.map(p => ({ name: p.name, firstName: p.first_name, lastName: p.last_name }))}
       gamePhase={game?.phase}
       onResetToLobby={async () => { await supabase.rpc("tel_reset_game", { p_code: code }) }}
-    />
+    >{footer}</PokeSystem>
   ) : null
 
   // ── Loading ───────────────────────────────────────────────────────────────
@@ -971,7 +979,7 @@ export default function Play({ params }) {
           </div>
         )}
       </div>
-      {pokeSystemNode}
+      {pokeSystemNode()}
     </>
     )
   }
@@ -995,7 +1003,7 @@ export default function Play({ params }) {
           </h2>
           <p style={{ fontSize: 16, opacity: 0.55, fontWeight: 500 }}>Get ready…</p>
         </div>
-        {pokeSystemNode}
+        {pokeSystemNode()}
         </>
       )
     }
@@ -1020,7 +1028,7 @@ export default function Play({ params }) {
             Reveal my telestration
           </button>
         </div>
-        {pokeSystemNode}
+        {pokeSystemNode()}
         </>
       )
     }
@@ -1049,7 +1057,7 @@ export default function Play({ params }) {
             )}
           </div>
         </div>
-        {pokeSystemNode}
+        {pokeSystemNode()}
         </>
       )
     }
@@ -1095,19 +1103,12 @@ export default function Play({ params }) {
           })}
         </div>
 
-        {allStepsRevealed && (
-          <div style={{ position: "fixed", bottom: FOOTER_H, left: 0, right: 0, padding: "16px 24px", paddingBottom: "calc(16px + env(safe-area-inset-bottom))", background: BG, borderTop: "1px solid rgba(255,255,255,0.15)" }}>
-            <button
-              onClick={handleNextChain}
-              disabled={advancing}
-              style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "20px", width: "100%", display: "block", borderRadius: 8 }}
-            >
-              {isLastChain ? "Finish →" : "Next telestration →"}
-            </button>
-          </div>
-        )}
       </div>
-      {pokeSystemNode}
+      {pokeSystemNode(
+        allStepsRevealed
+          ? <button onClick={handleNextChain} disabled={advancing} style={{ flex: 1, height: "100%", background: YELLOW, color: "#000", fontSize: 16, fontWeight: 900 }}>{isLastChain ? "Finish →" : "Next telestration →"}</button>
+          : null
+      )}
       </>
     )
   }
@@ -1120,7 +1121,7 @@ export default function Play({ params }) {
       <div style={{ minHeight: "100dvh", background: BG, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 18, fontWeight: 700 }}>Loading…</p>
       </div>
-      {pokeSystemNode}
+      {pokeSystemNode()}
       </>
     )
   }
@@ -1171,7 +1172,7 @@ export default function Play({ params }) {
             })}
           </div>
         </div>
-        {pokeSystemNode}
+        {pokeSystemNode()}
         </>
       )
     }
@@ -1204,7 +1205,7 @@ export default function Play({ params }) {
           </button>
         </div>
       </div>
-      {pokeSystemNode}
+      {pokeSystemNode()}
       </>
     )
   }
@@ -1247,7 +1248,7 @@ export default function Play({ params }) {
           })}
         </div>
       </div>
-      {pokeSystemNode}
+      {pokeSystemNode()}
       </>
     )
   }

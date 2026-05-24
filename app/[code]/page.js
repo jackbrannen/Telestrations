@@ -12,13 +12,10 @@ const WARM_LIGHT = "#3B1680"
 const MIN_PLAYERS = 5
 
 const TIMER_OPTIONS = [
-  { label: "Off", value: null },
-  { label: "15s", value: 15 },
-  { label: "30s", value: 30 },
-  { label: "45s", value: 45 },
-  { label: "60s", value: 60 },
-  { label: "90s", value: 90 },
-  { label: "2m", value: 120 },
+  { label: "No timer", value: null },
+  { label: "1 min", value: 60 },
+  { label: "2 min", value: 120 },
+  { label: "3 min", value: 180 },
 ]
 
 const WORDS_A = [
@@ -231,7 +228,7 @@ export default function Lobby({ params }) {
   }
 
   const canStart = humanPlayers.length >= MIN_PLAYERS
-  const timerLabel = TIMER_OPTIONS.find(o => o.value === game.timer_seconds)?.label ?? "60s"
+  const timerLabel = TIMER_OPTIONS.find(o => o.value === game.timer_seconds)?.label ?? "2 min"
 
   return (
     <div style={{ minHeight: "100dvh", background: BG, color: "white" }}>
