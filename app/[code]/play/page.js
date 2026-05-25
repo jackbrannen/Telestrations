@@ -451,6 +451,9 @@ export default function Play({ params }) {
   // Timer
   const [timeLeft, setTimeLeft] = useState(null)
   const [showGameModal, setShowGameModal] = useState(false)
+  const [pokeCooldownActive, setPokeCooldownActive] = useState(false)
+  const [pokeJustSent, setPokeJustSent] = useState(null)
+  const [instructions, setInstructions] = useState("")
 
   // Track previous phase so we don't auto-redirect when game resets after finishing
   const prevPhaseRef = useRef(null)
@@ -473,12 +476,18 @@ export default function Play({ params }) {
 
   const me = players.find(p => p.id === myPlayerId)
 
-  const inlinePokeCooldownRef = useRef(0)
+  useEffect(() => {
+    supabase.from("game_instructions").select("body").eq("game_key", "telestrations").single()
+      .then(({ data }) => { if (data?.body) setInstructions(data.body) })
+  }, [])
+
   async function sendInlinePoke(targetName) {
-    if (!me) return
-    if (Date.now() < inlinePokeCooldownRef.current) return
-    inlinePokeCooldownRef.current = Date.now() + 10000
+    if (!me || pokeCooldownActive) return
+    setPokeCooldownActive(true)
+    setPokeJustSent(targetName)
     await supabase.from("pokes").insert({ room_code: code, from_player: me.name, to_player: targetName, message: "👉" })
+    setTimeout(() => setPokeJustSent(null), 2000)
+    setTimeout(() => setPokeCooldownActive(false), 10000)
   }
 
   async function loadState() {
@@ -513,8 +522,8 @@ export default function Play({ params }) {
 
   useEffect(() => {
     loadState()
-    let poll = setInterval(loadState, 5000)
-    function handleVisibility() { clearInterval(poll); if (!document.hidden) { loadState(); poll = setInterval(loadState, 5000) } }
+    let poll = setInterval(loadState, 1500)
+    function handleVisibility() { clearInterval(poll); if (!document.hidden) { loadState(); poll = setInterval(loadState, 1500) } }
     document.addEventListener("visibilitychange", handleVisibility)
 
     const channel = supabase.channel(`tel-play-${code}`)
@@ -893,6 +902,7 @@ export default function Play({ params }) {
       allPlayers={players.map(p => p.name)}
       playerDetails={players.map(p => ({ name: p.name, firstName: p.first_name, lastName: p.last_name }))}
       gamePhase={game?.phase}
+      rules={instructions ? [["How to Play", instructions]] : null}
       onResetToLobby={async () => { await supabase.rpc("tel_reset_game", { p_code: code }) }}
     >{footer}</PokeSystem>
   ) : null
@@ -1230,7 +1240,11 @@ export default function Play({ params }) {
                     {isMe && <span style={{ fontSize: 11, opacity: 0.65, marginLeft: 6 }}>you</span>}
                   </span>
                   {!done && !isMe && (
-                    <button onClick={() => sendInlinePoke(p.name)} style={{ background: "transparent", color: "rgba(255,255,255,0.55)", fontSize: 20, padding: "0 4px", lineHeight: 1 }}>👉</button>
+                    pokeJustSent === p.name ? (
+                      <span style={{ fontSize: 18, color: "#12BAAA", fontWeight: 700 }}>✓</span>
+                    ) : !pokeCooldownActive ? (
+                      <button onClick={() => sendInlinePoke(p.name)} style={{ background: "transparent", color: "rgba(255,255,255,0.55)", fontSize: 20, padding: "0 4px", lineHeight: 1 }}>👉</button>
+                    ) : null
                   )}
                 </div>
               )
@@ -1306,7 +1320,11 @@ export default function Play({ params }) {
                   {!done && typingPlayerIds.has(p.id) && <span style={{ fontSize: 14, marginLeft: 6 }}>💬</span>}
                 </span>
                 {!done && !isMe && (
-                  <button onClick={() => sendInlinePoke(p.name)} style={{ background: "transparent", color: "rgba(255,255,255,0.55)", fontSize: 20, padding: "0 4px", lineHeight: 1 }}>👉</button>
+                  pokeJustSent === p.name ? (
+                    <span style={{ fontSize: 18, color: "#12BAAA", fontWeight: 700 }}>✓</span>
+                  ) : !pokeCooldownActive ? (
+                    <button onClick={() => sendInlinePoke(p.name)} style={{ background: "transparent", color: "rgba(255,255,255,0.55)", fontSize: 20, padding: "0 4px", lineHeight: 1 }}>👉</button>
+                  ) : null
                 )}
               </div>
             )

@@ -11,15 +11,6 @@ const MID_DARK = "#200C52"
 const WARM_LIGHT = "#3B1680"
 const MIN_PLAYERS = 5
 
-const INSTRUCTIONS = `Players: 4+ · Time: 15+ min
-
-A telephone-style game alternating between drawing and guessing.
-
-Each player starts by writing a phrase. They pass it to the next player, who draws it. That drawing passes to the next player, who guesses what it is. Their guess passes on to be drawn again, and so on down the chain.
-
-At the end, the original phrase and the final result are revealed side by side.
-
-An optional timer limits how long players have to draw or write each step.`
 
 const TIMER_OPTIONS = [
   { label: "No timer", value: null },
@@ -91,6 +82,7 @@ export default function Lobby({ params }) {
   const [joinError, setJoinError] = useState("")
   const [notFound, setNotFound] = useState(false)
   const [showInstructions, setShowInstructions] = useState(false)
+  const [instructions, setInstructions] = useState("")
   const [starting, setStarting] = useState(false)
   const [confirmingStart, setConfirmingStart] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -133,9 +125,11 @@ export default function Lobby({ params }) {
   }, [])
 
   useEffect(() => {
+    supabase.from("game_instructions").select("body").eq("game_key", "telestrations").single()
+      .then(({ data }) => { if (data?.body) setInstructions(data.body) })
     loadState()
-    let poll = setInterval(loadState, 5000)
-    function handleVisibility() { clearInterval(poll); if (!document.hidden) { loadState(); poll = setInterval(loadState, 5000) } }
+    let poll = setInterval(loadState, 1500)
+    function handleVisibility() { clearInterval(poll); if (!document.hidden) { loadState(); poll = setInterval(loadState, 1500) } }
     document.addEventListener("visibilitychange", handleVisibility)
 
     const channel = supabase.channel(`tel-lobby-${code}`)
@@ -428,7 +422,7 @@ export default function Lobby({ params }) {
               <button onClick={() => setShowInstructions(false)} style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 18, fontWeight: 800, padding: "6px 12px" }}>✕</button>
             </div>
             <div style={{ fontSize: 15, color: "rgba(255,255,255,0.85)", lineHeight: 1.7, fontWeight: 400, whiteSpace: "pre-wrap" }}>
-              {INSTRUCTIONS}
+              {instructions || "Loading…"}
             </div>
           </div>
         </div>
