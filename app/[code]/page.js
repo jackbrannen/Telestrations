@@ -9,7 +9,7 @@ const YELLOW = "#FBDF54"
 const COOL_DARK = "#1A0840"
 const MID_DARK = "#200C52"
 const WARM_LIGHT = "#3B1680"
-const MIN_PLAYERS = 5
+const MIN_PLAYERS = 4
 
 
 const TIMER_OPTIONS = [

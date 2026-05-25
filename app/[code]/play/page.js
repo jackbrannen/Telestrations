@@ -465,11 +465,6 @@ export default function Play({ params }) {
   const revealEndRef = useRef(null)
 
   useEffect(() => {
-    if (game?.phase !== "reveal" || currentRevealStep < 0) return
-    setTimeout(() => revealEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80)
-  }, [game?.phase, currentRevealStep, currentRevealChain])
-
-  useEffect(() => {
     if (!game?.next_game) return
     window.location.href = `https://${game.next_game}.jackbrannen.com/`
   }, [game?.next_game])
@@ -579,6 +574,11 @@ export default function Play({ params }) {
   const revealOrder = game?.reveal_order ?? []
   const currentRevealChain = game?.current_reveal_chain ?? 0
   const currentRevealStep = game?.current_reveal_step ?? -1
+
+  useEffect(() => {
+    if (game?.phase !== "reveal" || currentRevealStep < 0) return
+    setTimeout(() => revealEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80)
+  }, [game?.phase, currentRevealStep, currentRevealChain])
 
   const currentPresenterPlayer = useMemo(() => {
     if (!revealOrder.length || !players.length) return null
@@ -935,10 +935,16 @@ export default function Play({ params }) {
         <div style={{ padding: "36px 24px 24px", textAlign: "center" }}>
           <h1 style={{ fontSize: 32, fontWeight: 900, letterSpacing: "-1px", marginBottom: 8 }}>That's a wrap!</h1>
           <p style={{ fontSize: 16, opacity: 0.65, fontWeight: 500, marginBottom: 28 }}>This is your reminder to take screenshots.</p>
-          <button
-            onClick={() => router.replace(`/${code}`)}
-            style={{ background: "rgba(255,255,255,0.12)", color: "white", fontSize: 16, fontWeight: 700, padding: "16px 28px", borderRadius: 8 }}
-          >Back to lobby</button>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 360, margin: "0 auto" }}>
+            <button
+              onClick={() => supabase.rpc("tel_reset_game", { p_code: code })}
+              style={{ background: YELLOW, color: "#000", fontSize: 16, fontWeight: 900, padding: "14px 24px", width: "100%" }}
+            >Play Again</button>
+            <button
+              onClick={() => setShowGameModal(true)}
+              style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 16, fontWeight: 700, padding: "14px 24px", width: "100%" }}
+            >Play Another Game</button>
+          </div>
         </div>
 
         {/* Telestration thumbnails */}
