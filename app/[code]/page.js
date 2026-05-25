@@ -251,28 +251,30 @@ export default function Lobby({ params }) {
             })()}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8, flexShrink: 0, marginTop: 4 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, flexShrink: 0, marginTop: 4, alignItems: "stretch" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setSettingsOpen(s => !s)}
+              style={{ background: settingsOpen ? WARM_LIGHT : "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 14px" }}
+            >
+              ⚙ {timerLabel}
+            </button>
+            <button
+              onClick={async () => {
+                const url = window.location.href
+                if (navigator.share) await navigator.share({ title: `Join Telestrations — ${code}`, url })
+                else { await navigator.clipboard.writeText(url); alert("Link copied!") }
+              }}
+              style={{ background: "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 16px" }}
+            >
+              Invite
+            </button>
+          </div>
           <button
             onClick={() => setShowInstructions(true)}
-            style={{ flexShrink: 0, background: "rgba(255,255,255,0.15)", color: "white", fontSize: 15, fontWeight: 800, padding: "10px 14px" }}
+            style={{ background: "rgba(255,255,255,0.15)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 14px" }}
           >
-            ?
-          </button>
-          <button
-            onClick={() => setSettingsOpen(s => !s)}
-            style={{ background: settingsOpen ? WARM_LIGHT : "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 14px" }}
-          >
-            ⚙ {timerLabel}
-          </button>
-          <button
-            onClick={async () => {
-              const url = window.location.href
-              if (navigator.share) await navigator.share({ title: `Join Telestrations — ${code}`, url })
-              else { await navigator.clipboard.writeText(url); alert("Link copied!") }
-            }}
-            style={{ background: "rgba(255,255,255,0.12)", color: "white", fontSize: 13, fontWeight: 800, padding: "10px 16px" }}
-          >
-            Invite
+            How to Play
           </button>
         </div>
       </div>
