@@ -50,6 +50,6 @@ ul, ol {
 }
 
 @keyframes nudgePulse {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.5); }
+  0%, 100% { filter: brightness(1); transform: scale(1); }
+  50% { filter: brightness(2.2); transform: scale(1.04); }
 }

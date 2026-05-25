@@ -1389,7 +1389,7 @@ export default function Play({ params }) {
         <button
           onClick={() => handleSubmitSentence()}
           disabled={!sentence.trim() || submitting}
-          style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "18px", width: "100%", marginTop: 8, display: "block", borderRadius: 8, animation: nudgeSentence ? "nudgePulse 1.5s ease-in-out infinite" : "none" }}
+          style={{ background: YELLOW, color: "#000", fontSize: 20, fontWeight: 900, padding: "18px", width: "100%", marginTop: 8, display: "block", borderRadius: 8, animation: nudgeSentence ? "nudgePulse 1.0s ease-in-out infinite" : "none" }}
         >
           {submitting ? "Submitting…" : "Lock it in"}
         </button>
@@ -1438,7 +1438,7 @@ export default function Play({ params }) {
         <div style={{ height: 40 }} />
       </div>
     </div>
-    {pokeSystemNode}
+    {pokeSystemNode()}
     </>
   )
 }
